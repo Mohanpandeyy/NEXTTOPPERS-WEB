@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import AdminUsers from '@/pages/admin/AdminUsers';
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -39,7 +40,7 @@ const App = () => (
                 <Route path="batches" element={<AdminBatches />} />
                 <Route path="lectures" element={<AdminPlaceholder />} />
                 <Route path="timetables" element={<AdminPlaceholder />} />
-                <Route path="users" element={<AdminPlaceholder />} />
+                <Route path="users" element={<AdminUsers />} />
                 <Route path="media" element={<AdminPlaceholder />} />
                 <Route path="settings" element={<AdminPlaceholder />} />
               </Route>
