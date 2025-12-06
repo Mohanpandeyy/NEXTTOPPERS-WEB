@@ -1,6 +1,6 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
+import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap, Key } from 'lucide-react';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { cn } from '@/lib/utils';
 
 const sidebarLinks = [
@@ -9,16 +9,25 @@ const sidebarLinks = [
   { href: '/admin/lectures', label: 'Lectures', icon: Video },
   { href: '/admin/timetables', label: 'Timetables', icon: Calendar },
   { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/passwords', label: 'Access Passwords', icon: Key },
   { href: '/admin/media', label: 'Media', icon: Image },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminLayout() {
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, isLoading, signOut } = useSupabaseAuth();
   const location = useLocation();
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   if (!isAdmin) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/auth" replace />;
   }
 
   return (
@@ -58,7 +67,7 @@ export default function AdminLayout() {
 
         <div className="p-4 border-t border-sidebar-border">
           <button
-            onClick={logout}
+            onClick={signOut}
             className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
           >
             <LogOut className="w-4 h-4" />
