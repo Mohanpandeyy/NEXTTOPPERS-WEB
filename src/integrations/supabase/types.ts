@@ -14,16 +14,400 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_settings: {
+        Row: {
+          app_name: string
+          id: string
+          logo_url: string | null
+          primary_color: string
+          updated_at: string
+        }
+        Insert: {
+          app_name?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          updated_at?: string
+        }
+        Update: {
+          app_name?: string
+          id?: string
+          logo_url?: string | null
+          primary_color?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      batch_access_passwords: {
+        Row: {
+          batch_id: string
+          created_at: string
+          current_uses: number
+          expires_at: string
+          id: string
+          is_active: boolean
+          max_uses: number
+          password: string
+          valid_hours: number
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          current_uses?: number
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          password: string
+          valid_hours?: number
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          current_uses?: number
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          max_uses?: number
+          password?: string
+          valid_hours?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_access_passwords_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batches: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          start_date: string | null
+          status: Database["public"]["Enums"]["batch_status"]
+          tags: string[] | null
+          target_exam: Database["public"]["Enums"]["exam_type"]
+          thumbnail_url: string | null
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["batch_status"]
+          tags?: string[] | null
+          target_exam?: Database["public"]["Enums"]["exam_type"]
+          thumbnail_url?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          status?: Database["public"]["Enums"]["batch_status"]
+          tags?: string[] | null
+          target_exam?: Database["public"]["Enums"]["exam_type"]
+          thumbnail_url?: string | null
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: []
+      }
+      enrollments: {
+        Row: {
+          batch_id: string
+          enrolled_at: string
+          enrolled_via_password_id: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          batch_id: string
+          enrolled_at?: string
+          enrolled_via_password_id?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          batch_id?: string
+          enrolled_at?: string
+          enrolled_via_password_id?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enrollments_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enrollments_enrolled_via_password_id_fkey"
+            columns: ["enrolled_via_password_id"]
+            isOneToOne: false
+            referencedRelation: "batch_access_passwords"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lectures: {
+        Row: {
+          batch_id: string
+          created_at: string
+          date_time: string | null
+          dpp_url: string | null
+          duration_minutes: number
+          id: string
+          is_locked: boolean
+          notes_url: string | null
+          special_module_url: string | null
+          subject: string
+          teacher_name: string
+          thumbnail_url: string | null
+          title: string
+          topic_tags: string[] | null
+          updated_at: string
+          video_type: Database["public"]["Enums"]["video_type"]
+          video_url: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          date_time?: string | null
+          dpp_url?: string | null
+          duration_minutes?: number
+          id?: string
+          is_locked?: boolean
+          notes_url?: string | null
+          special_module_url?: string | null
+          subject: string
+          teacher_name: string
+          thumbnail_url?: string | null
+          title: string
+          topic_tags?: string[] | null
+          updated_at?: string
+          video_type?: Database["public"]["Enums"]["video_type"]
+          video_url?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          date_time?: string | null
+          dpp_url?: string | null
+          duration_minutes?: number
+          id?: string
+          is_locked?: boolean
+          notes_url?: string | null
+          special_module_url?: string | null
+          subject?: string
+          teacher_name?: string
+          thumbnail_url?: string | null
+          title?: string
+          topic_tags?: string[] | null
+          updated_at?: string
+          video_type?: Database["public"]["Enums"]["video_type"]
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lectures_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          type: string
+          uploaded_by: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          type?: string
+          uploaded_by?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string
+          uploaded_by?: string | null
+          url?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      timetable_entries: {
+        Row: {
+          created_at: string
+          day: string
+          id: string
+          lecture_id: string | null
+          subject: string
+          teacher: string | null
+          time: string
+          timetable_id: string
+          topic: string | null
+        }
+        Insert: {
+          created_at?: string
+          day: string
+          id?: string
+          lecture_id?: string | null
+          subject: string
+          teacher?: string | null
+          time: string
+          timetable_id: string
+          topic?: string | null
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          id?: string
+          lecture_id?: string | null
+          subject?: string
+          teacher?: string | null
+          time?: string
+          timetable_id?: string
+          topic?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetable_entries_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetable_entries_timetable_id_fkey"
+            columns: ["timetable_id"]
+            isOneToOne: false
+            referencedRelation: "timetables"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      timetables: {
+        Row: {
+          batch_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          week_range: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          week_range?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          week_range?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetables_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_admin: { Args: never; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "student"
+      batch_status: "ongoing" | "upcoming" | "completed"
+      exam_type: "JEE" | "NEET" | "Boards" | "Foundation" | "9-10" | "11-12"
+      video_type: "live" | "recorded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +534,11 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "student"],
+      batch_status: ["ongoing", "upcoming", "completed"],
+      exam_type: ["JEE", "NEET", "Boards", "Foundation", "9-10", "11-12"],
+      video_type: ["live", "recorded"],
+    },
   },
 } as const

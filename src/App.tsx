@@ -1,56 +1,60 @@
 import { Toaster } from "@/components/ui/toaster";
-import AdminUsers from '@/pages/admin/AdminUsers';
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { DataProvider } from "@/contexts/DataContext";
+import { SupabaseAuthProvider } from "@/hooks/useSupabaseAuth";
 import Navbar from "@/components/layout/Navbar";
 import Home from "@/pages/Home";
 import Batches from "@/pages/Batches";
 import BatchDetail from "@/pages/BatchDetail";
 import MyClasses from "@/pages/MyClasses";
+import Auth from "@/pages/Auth";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import Dashboard from "@/pages/admin/Dashboard";
 import AdminBatches from "@/pages/admin/AdminBatches";
-import AdminPlaceholder from "@/pages/admin/AdminPlaceholder";
+import AdminLectures from "@/pages/admin/AdminLectures";
+import AdminTimetables from "@/pages/admin/AdminTimetables";
+import AdminUsersNew from "@/pages/admin/AdminUsersNew";
+import AdminMedia from "@/pages/admin/AdminMedia";
+import AdminSettings from "@/pages/admin/AdminSettings";
+import AdminBatchPasswords from "@/pages/admin/AdminBatchPasswords";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <DataProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <Routes>
-              {/* Public routes with navbar */}
-              <Route path="/" element={<><Navbar /><Home /></>} />
-              <Route path="/batches" element={<><Navbar /><Batches /></>} />
-              <Route path="/batch/:id" element={<><Navbar /><BatchDetail /></>} />
-              <Route path="/my-classes" element={<><Navbar /><MyClasses /></>} />
-              
-              {/* Admin routes */}
-              <Route path="/admin" element={<AdminLayout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="batches" element={<AdminBatches />} />
-                <Route path="lectures" element={<AdminPlaceholder />} />
-                <Route path="timetables" element={<AdminPlaceholder />} />
-                <Route path="users" element={<AdminUsers />} />
-                <Route path="media" element={<AdminPlaceholder />} />
-                <Route path="settings" element={<AdminPlaceholder />} />
-              </Route>
-              
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
-      </DataProvider>
-    </AuthProvider>
+    <SupabaseAuthProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            {/* Public routes with navbar */}
+            <Route path="/" element={<><Navbar /><Home /></>} />
+            <Route path="/batches" element={<><Navbar /><Batches /></>} />
+            <Route path="/batch/:id" element={<><Navbar /><BatchDetail /></>} />
+            <Route path="/my-classes" element={<><Navbar /><MyClasses /></>} />
+            <Route path="/auth" element={<Auth />} />
+            
+            {/* Admin routes */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Dashboard />} />
+              <Route path="batches" element={<AdminBatches />} />
+              <Route path="lectures" element={<AdminLectures />} />
+              <Route path="timetables" element={<AdminTimetables />} />
+              <Route path="users" element={<AdminUsersNew />} />
+              <Route path="passwords" element={<AdminBatchPasswords />} />
+              <Route path="media" element={<AdminMedia />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
+            
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </SupabaseAuthProvider>
   </QueryClientProvider>
 );
 
