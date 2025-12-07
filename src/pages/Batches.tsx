@@ -5,15 +5,18 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import BatchCard from '@/components/cards/BatchCard';
-import { useData } from '@/contexts/DataContext';
-import { ExamType, BatchStatus } from '@/types';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import { Database } from '@/integrations/supabase/types';
+
+type ExamType = Database['public']['Enums']['exam_type'];
+type BatchStatus = Database['public']['Enums']['batch_status'];
 
 const examTypes: ExamType[] = ['JEE', 'NEET', 'Boards', 'Foundation', '9-10', '11-12'];
 const statusTypes: BatchStatus[] = ['ongoing', 'upcoming', 'completed'];
 
 export default function Batches() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { batches } = useData();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedExam, setSelectedExam] = useState<ExamType | null>(
@@ -22,22 +25,33 @@ export default function Batches() {
   const [selectedStatus, setSelectedStatus] = useState<BatchStatus | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  const { data: batches = [] } = useQuery({
+    queryKey: ['batches'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('*')
+        .eq('visibility', 'public')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const filteredBatches = useMemo(() => {
     return batches.filter((batch) => {
-      if (batch.visibility === 'private') return false;
-      
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
         if (
           !batch.name.toLowerCase().includes(query) &&
-          !batch.description.toLowerCase().includes(query) &&
-          !batch.tags.some(tag => tag.toLowerCase().includes(query))
+          !(batch.description || '').toLowerCase().includes(query) &&
+          !(batch.tags || []).some(tag => tag.toLowerCase().includes(query))
         ) {
           return false;
         }
       }
       
-      if (selectedExam && batch.targetExam !== selectedExam) return false;
+      if (selectedExam && batch.target_exam !== selectedExam) return false;
       if (selectedStatus && batch.status !== selectedStatus) return false;
       
       return true;

@@ -1,19 +1,60 @@
 import { Users, BookOpen, Video, TrendingUp } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useData } from '@/contexts/DataContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 export default function Dashboard() {
-  const { batches, lectures, users } = useData();
-  
-  const stats = [
-    { label: 'Total Students', value: users.filter(u => u.role === 'student').length, icon: Users, color: 'text-blue-500' },
-    { label: 'Total Batches', value: batches.length, icon: BookOpen, color: 'text-green-500' },
-    { label: 'Active Batches', value: batches.filter(b => b.status === 'ongoing').length, icon: TrendingUp, color: 'text-amber-500' },
-    { label: 'Total Lectures', value: lectures.length, icon: Video, color: 'text-purple-500' },
-  ];
+  const { data: stats = { students: 0, batches: 0, activeBatches: 0, lectures: 0 } } = useQuery({
+    queryKey: ['admin-stats'],
+    queryFn: async () => {
+      const [studentsRes, batchesRes, lecturesRes] = await Promise.all([
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('batches').select('*'),
+        supabase.from('lectures').select('*', { count: 'exact', head: true }),
+      ]);
+      
+      const batches = batchesRes.data || [];
+      return {
+        students: studentsRes.count || 0,
+        batches: batches.length,
+        activeBatches: batches.filter(b => b.status === 'ongoing').length,
+        lectures: lecturesRes.count || 0,
+      };
+    },
+  });
 
-  const recentLectures = lectures.slice(-5).reverse();
-  const recentBatches = batches.slice(-3).reverse();
+  const { data: recentLectures = [] } = useQuery({
+    queryKey: ['recent-lectures'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lectures')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(5);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const { data: recentBatches = [] } = useQuery({
+    queryKey: ['recent-batches'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(3);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
+  const statCards = [
+    { label: 'Total Students', value: stats.students, icon: Users, color: 'text-blue-500' },
+    { label: 'Total Batches', value: stats.batches, icon: BookOpen, color: 'text-green-500' },
+    { label: 'Active Batches', value: stats.activeBatches, icon: TrendingUp, color: 'text-amber-500' },
+    { label: 'Total Lectures', value: stats.lectures, icon: Video, color: 'text-purple-500' },
+  ];
 
   return (
     <div className="p-6">
@@ -21,7 +62,7 @@ export default function Dashboard() {
       
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {stats.map((stat) => (
+        {statCards.map((stat) => (
           <Card key={stat.label}>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -44,14 +85,18 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentLectures.map((lecture) => (
-                <div key={lecture.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{lecture.title}</p>
-                    <p className="text-sm text-muted-foreground">{lecture.subject} • {lecture.teacherName}</p>
+              {recentLectures.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No lectures yet</p>
+              ) : (
+                recentLectures.map((lecture) => (
+                  <div key={lecture.id} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg">
+                    <div>
+                      <p className="font-medium">{lecture.title}</p>
+                      <p className="text-sm text-muted-foreground">{lecture.subject} • {lecture.teacher_name}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
@@ -63,15 +108,19 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {recentBatches.map((batch) => (
-                <div key={batch.id} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
-                  <img src={batch.thumbnailUrl} alt={batch.name} className="w-16 h-12 object-cover rounded" />
-                  <div>
-                    <p className="font-medium">{batch.name}</p>
-                    <p className="text-sm text-muted-foreground">{batch.targetExam} • {batch.studentIds.length} students</p>
+              {recentBatches.length === 0 ? (
+                <p className="text-muted-foreground text-sm">No batches yet</p>
+              ) : (
+                recentBatches.map((batch) => (
+                  <div key={batch.id} className="flex items-center gap-3 p-3 bg-secondary/50 rounded-lg">
+                    <img src={batch.thumbnail_url || '/placeholder.svg'} alt={batch.name} className="w-16 h-12 object-cover rounded" />
+                    <div>
+                      <p className="font-medium">{batch.name}</p>
+                      <p className="text-sm text-muted-foreground">{batch.target_exam} • {batch.status}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

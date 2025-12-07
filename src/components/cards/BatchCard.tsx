@@ -2,11 +2,12 @@ import { Link } from 'react-router-dom';
 import { Calendar, Users, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Batch } from '@/types';
 import { cn } from '@/lib/utils';
+import { Tables } from '@/integrations/supabase/types';
 
 interface BatchCardProps {
-  batch: Batch;
+  batch: Tables<'batches'>;
+  studentCount?: number;
   className?: string;
 }
 
@@ -16,7 +17,7 @@ const statusColors = {
   completed: 'bg-muted text-muted-foreground border-muted',
 };
 
-export default function BatchCard({ batch, className }: BatchCardProps) {
+export default function BatchCard({ batch, studentCount = 0, className }: BatchCardProps) {
   return (
     <div
       className={cn(
@@ -26,7 +27,7 @@ export default function BatchCard({ batch, className }: BatchCardProps) {
     >
       <div className="relative aspect-video overflow-hidden">
         <img
-          src={batch.thumbnailUrl}
+          src={batch.thumbnail_url || '/placeholder.svg'}
           alt={batch.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
@@ -43,7 +44,7 @@ export default function BatchCard({ batch, className }: BatchCardProps) {
       
       <div className="p-5">
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {batch.tags.slice(0, 3).map((tag) => (
+          {(batch.tags || []).slice(0, 3).map((tag) => (
             <Badge key={tag} variant="secondary" className="text-xs">
               {tag}
             </Badge>
@@ -61,11 +62,11 @@ export default function BatchCard({ batch, className }: BatchCardProps) {
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
           <div className="flex items-center gap-1.5">
             <Calendar className="w-4 h-4" />
-            <span>{new Date(batch.startDate).toLocaleDateString()}</span>
+            <span>{batch.start_date ? new Date(batch.start_date).toLocaleDateString() : 'TBD'}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Users className="w-4 h-4" />
-            <span>{batch.studentIds.length} students</span>
+            <span>{studentCount} students</span>
           </div>
         </div>
         
