@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import BatchCard from '@/components/cards/BatchCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 const categories = [
-  { name: 'JEE', icon: '🎯', color: 'bg-blue-500/10 text-blue-600' },
+  { name: 'JEE', icon: '🎯', color: 'bg-primary/10 text-primary' },
   { name: 'NEET', icon: '🔬', color: 'bg-green-500/10 text-green-600' },
   { name: 'Boards', icon: '📚', color: 'bg-purple-500/10 text-purple-600' },
-  { name: 'Foundation', icon: '🏗️', color: 'bg-amber-500/10 text-amber-600' },
+  { name: 'Foundation', icon: '🏗️', color: 'bg-accent/10 text-accent' },
   { name: '9-10', icon: '📖', color: 'bg-pink-500/10 text-pink-600' },
   { name: '11-12', icon: '🎓', color: 'bg-cyan-500/10 text-cyan-600' },
 ];
@@ -22,6 +23,8 @@ const stats = [
 ];
 
 export default function Home() {
+  const { appName, logoUrl } = useAppSettings();
+  
   const { data: batches = [] } = useQuery({
     queryKey: ['public-batches'],
     queryFn: async () => {
@@ -165,7 +168,7 @@ export default function Home() {
               Ready to Start Learning?
             </h2>
             <p className="text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-              Join thousands of students who are already preparing for their dream careers with EduMaster.
+              Join thousands of students who are already preparing for their dream careers with {appName}.
             </p>
             <Link to="/batches">
               <Button size="lg" variant="secondary" className="text-lg px-8">
@@ -181,14 +184,18 @@ export default function Home() {
       <footer className="bg-card border-t border-border py-12">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2 text-xl font-bold">
-              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                <BookOpen className="w-5 h-5 text-primary-foreground" />
-              </div>
-              EduMaster
+            <div className="flex items-center gap-2.5 text-xl font-bold">
+              {logoUrl ? (
+                <img src={logoUrl} alt={appName} className="w-8 h-8 rounded-lg object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                  <BookOpen className="w-5 h-5 text-primary-foreground" />
+                </div>
+              )}
+              {appName}
             </div>
             <p className="text-sm text-muted-foreground">
-              © 2024 EduMaster. All rights reserved.
+              © {new Date().getFullYear()} {appName}. All rights reserved.
             </p>
           </div>
         </div>

@@ -146,14 +146,17 @@ export default function AdminLectures() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${type}/${Date.now()}.${fileExt}`;
       
+      // Use 'videos' bucket for video files, 'media' for others
+      const bucket = type === 'video' ? 'videos' : 'media';
+      
       const { error: uploadError } = await supabase.storage
-        .from('media')
+        .from(bucket)
         .upload(fileName, file);
       
       if (uploadError) throw uploadError;
       
       const { data: { publicUrl } } = supabase.storage
-        .from('media')
+        .from(bucket)
         .getPublicUrl(fileName);
       
       return publicUrl;
@@ -326,10 +329,13 @@ export default function AdminLectures() {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-bold">Lectures</h1>
-        <Button onClick={handleOpenCreate}>
+    <div className="p-4 md:p-6 space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Lectures</h1>
+          <p className="text-sm text-muted-foreground">Manage all lectures and upload videos</p>
+        </div>
+        <Button onClick={handleOpenCreate} className="gradient-primary">
           <Plus className="w-4 h-4 mr-2" />
           Add Lecture
         </Button>
@@ -371,9 +377,9 @@ export default function AdminLectures() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg overflow-hidden">
+      <div className="border rounded-xl overflow-hidden bg-card shadow-card">
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-secondary/50">
             <TableRow>
               <TableHead>Title</TableHead>
               <TableHead>Subject</TableHead>

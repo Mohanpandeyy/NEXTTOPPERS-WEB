@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BookOpen, GraduationCap, User, Menu, X, LogIn, LogOut } from 'lucide-react';
+import { Home, BookOpen, GraduationCap, Menu, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { useAppSettings } from '@/hooks/useAppSettings';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: Home },
@@ -15,6 +16,7 @@ export default function Navbar() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, isAdmin, signOut } = useSupabaseAuth();
+  const { appName, logoUrl } = useAppSettings();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -23,18 +25,22 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
+    <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-xl border-b border-border/50 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link
             to="/"
-            className="flex items-center gap-2 text-xl font-bold text-foreground hover:text-primary transition-colors"
+            className="flex items-center gap-2.5 text-xl font-bold text-foreground hover:text-primary transition-colors"
           >
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span>EduMaster</span>
+            {logoUrl ? (
+              <img src={logoUrl} alt={appName} className="w-8 h-8 rounded-lg object-cover" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-primary-foreground" />
+              </div>
+            )}
+            <span className="hidden sm:inline">{appName}</span>
           </Link>
 
           {/* Desktop Navigation */}
