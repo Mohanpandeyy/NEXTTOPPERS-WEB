@@ -1,16 +1,16 @@
 import { Play, FileText, Download, Lock, Clock, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Lecture } from '@/types';
+import { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 
 interface LectureCardProps {
-  lecture: Lecture;
+  lecture: Tables<'lectures'>;
   isEnrolled: boolean;
 }
 
 export default function LectureCard({ lecture, isEnrolled }: LectureCardProps) {
-  const isLocked = lecture.isLocked && !isEnrolled;
+  const isLocked = lecture.is_locked && !isEnrolled;
 
   return (
     <div
@@ -22,7 +22,7 @@ export default function LectureCard({ lecture, isEnrolled }: LectureCardProps) {
       <div className="flex flex-col sm:flex-row">
         <div className="relative sm:w-48 aspect-video sm:aspect-square flex-shrink-0">
           <img
-            src={lecture.thumbnailUrl}
+            src={lecture.thumbnail_url || '/placeholder.svg'}
             alt={lecture.title}
             className="w-full h-full object-cover"
           />
@@ -40,18 +40,18 @@ export default function LectureCard({ lecture, isEnrolled }: LectureCardProps) {
           <Badge
             className={cn(
               'absolute top-2 left-2 capitalize',
-              lecture.videoType === 'live'
+              lecture.video_type === 'live'
                 ? 'bg-destructive text-destructive-foreground'
                 : 'bg-secondary text-secondary-foreground'
             )}
           >
-            {lecture.videoType}
+            {lecture.video_type}
           </Badge>
         </div>
 
         <div className="flex-1 p-4">
           <div className="flex flex-wrap gap-1.5 mb-2">
-            {lecture.topicTags.slice(0, 2).map((tag) => (
+            {(lecture.topic_tags || []).slice(0, 2).map((tag) => (
               <Badge key={tag} variant="outline" className="text-xs">
                 {tag}
               </Badge>
@@ -63,11 +63,11 @@ export default function LectureCard({ lecture, isEnrolled }: LectureCardProps) {
           <div className="flex flex-wrap gap-3 text-sm text-muted-foreground mb-3">
             <div className="flex items-center gap-1">
               <User className="w-3.5 h-3.5" />
-              <span>{lecture.teacherName}</span>
+              <span>{lecture.teacher_name}</span>
             </div>
             <div className="flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              <span>{lecture.durationMinutes} min</span>
+              <span>{lecture.duration_minutes} min</span>
             </div>
           </div>
 
@@ -76,27 +76,30 @@ export default function LectureCard({ lecture, isEnrolled }: LectureCardProps) {
               size="sm"
               disabled={isLocked}
               className="gap-1.5"
+              onClick={() => !isLocked && lecture.video_url && window.open(lecture.video_url, '_blank')}
             >
               <Play className="w-3.5 h-3.5" />
               Watch
             </Button>
-            {lecture.notesUrl && (
+            {lecture.notes_url && (
               <Button
                 size="sm"
                 variant="outline"
                 disabled={isLocked}
                 className="gap-1.5"
+                onClick={() => !isLocked && window.open(lecture.notes_url!, '_blank')}
               >
                 <FileText className="w-3.5 h-3.5" />
                 Notes
               </Button>
             )}
-            {lecture.dppUrl && (
+            {lecture.dpp_url && (
               <Button
                 size="sm"
                 variant="outline"
                 disabled={isLocked}
                 className="gap-1.5"
+                onClick={() => !isLocked && window.open(lecture.dpp_url!, '_blank')}
               >
                 <Download className="w-3.5 h-3.5" />
                 DPP

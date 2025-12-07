@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import LectureCard from '@/components/cards/LectureCard';
-import { useData } from '@/contexts/DataContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 const statusColors = {
   ongoing: 'bg-green-500/10 text-green-600 border-green-500/20',
@@ -19,15 +23,172 @@ const statusColors = {
 
 export default function BatchDetail() {
   const { id } = useParams<{ id: string }>();
-  const { getBatchById, getLecturesByBatchId, getTimetableByBatchId } = useData();
-  const { isEnrolled, isAdmin } = useAuth();
+  const { user, isAdmin, isEnrolled } = useSupabaseAuth();
+  const queryClient = useQueryClient();
   
   const [searchQuery, setSearchQuery] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('all');
+  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
+  const [accessPassword, setAccessPassword] = useState('');
 
-  const batch = getBatchById(id || '');
-  const lectures = getLecturesByBatchId(id || '');
-  const timetable = getTimetableByBatchId(id || '');
+  // Fetch batch
+  const { data: batch, isLoading: batchLoading } = useQuery({
+    queryKey: ['batch', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch lectures
+  const { data: lectures = [] } = useQuery({
+    queryKey: ['lectures', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('lectures')
+        .select('*')
+        .eq('batch_id', id)
+        .order('date_time', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
+  // Fetch timetable
+  const { data: timetable } = useQuery({
+    queryKey: ['timetable', id],
+    queryFn: async () => {
+      const { data: timetableData, error: timetableError } = await supabase
+        .from('timetables')
+        .select('*')
+        .eq('batch_id', id)
+        .single();
+      
+      if (timetableError && timetableError.code !== 'PGRST116') throw timetableError;
+      if (!timetableData) return null;
+
+      const { data: entries, error: entriesError } = await supabase
+        .from('timetable_entries')
+        .select('*')
+        .eq('timetable_id', timetableData.id)
+        .order('day');
+      
+      if (entriesError) throw entriesError;
+      return { ...timetableData, entries: entries || [] };
+    },
+    enabled: !!id,
+  });
+
+  // Fetch student count
+  const { data: studentCount = 0 } = useQuery({
+    queryKey: ['student-count', id],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('enrollments')
+        .select('*', { count: 'exact', head: true })
+        .eq('batch_id', id);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!id,
+  });
+
+  // Check enrollment
+  const { data: userEnrolled = false } = useQuery({
+    queryKey: ['enrollment', id, user?.id],
+    queryFn: async () => {
+      if (!user || !id) return false;
+      return await isEnrolled(id);
+    },
+    enabled: !!user && !!id,
+  });
+
+  // Enroll mutation
+  const enrollMutation = useMutation({
+    mutationFn: async (password: string) => {
+      if (!user || !id) throw new Error('Not authenticated');
+      
+      // Validate password
+      const { data: passwordData, error: passwordError } = await supabase
+        .from('batch_access_passwords')
+        .select('*')
+        .eq('batch_id', id)
+        .eq('password', password)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .single();
+      
+      if (passwordError || !passwordData) {
+        throw new Error('Invalid or expired password');
+      }
+
+      if (passwordData.current_uses >= passwordData.max_uses) {
+        throw new Error('This password has reached its usage limit');
+      }
+
+      // Create enrollment
+      const { error: enrollError } = await supabase
+        .from('enrollments')
+        .insert({
+          user_id: user.id,
+          batch_id: id,
+          enrolled_via_password_id: passwordData.id,
+        });
+      
+      if (enrollError) throw enrollError;
+
+      // Update password usage count
+      await supabase
+        .from('batch_access_passwords')
+        .update({ current_uses: passwordData.current_uses + 1 })
+        .eq('id', passwordData.id);
+    },
+    onSuccess: () => {
+      toast.success('Successfully enrolled in this batch!');
+      setPasswordModalOpen(false);
+      setAccessPassword('');
+      queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
+      queryClient.invalidateQueries({ queryKey: ['student-count', id] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
+
+  const enrolled = isAdmin || userEnrolled;
+  const subjects = [...new Set(lectures.map(l => l.subject))];
+
+  const filteredLectures = lectures.filter((lecture) => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      if (
+        !lecture.title.toLowerCase().includes(query) &&
+        !(lecture.topic_tags || []).some(tag => tag.toLowerCase().includes(query))
+      ) {
+        return false;
+      }
+    }
+    if (subjectFilter !== 'all' && lecture.subject !== subjectFilter) return false;
+    return true;
+  });
+
+  const notes = lectures.filter(l => l.notes_url);
+  const dpps = lectures.filter(l => l.dpp_url);
+  const specialMaterials = lectures.filter(l => l.special_module_url);
+
+  if (batchLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   if (!batch) {
     return (
@@ -42,33 +203,12 @@ export default function BatchDetail() {
     );
   }
 
-  const enrolled = isAdmin || isEnrolled(batch.id);
-  const subjects = [...new Set(lectures.map(l => l.subject))];
-
-  const filteredLectures = lectures.filter((lecture) => {
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      if (
-        !lecture.title.toLowerCase().includes(query) &&
-        !lecture.topicTags.some(tag => tag.toLowerCase().includes(query))
-      ) {
-        return false;
-      }
-    }
-    if (subjectFilter !== 'all' && lecture.subject !== subjectFilter) return false;
-    return true;
-  });
-
-  const notes = lectures.filter(l => l.notesUrl);
-  const dpps = lectures.filter(l => l.dppUrl);
-  const specialMaterials = lectures.filter(l => l.specialModuleUrl);
-
   return (
     <div className="min-h-screen bg-background">
       {/* Banner */}
       <div className="relative h-64 md:h-80 overflow-hidden">
         <img
-          src={batch.thumbnailUrl}
+          src={batch.thumbnail_url || '/placeholder.svg'}
           alt={batch.name}
           className="w-full h-full object-cover"
         />
@@ -86,8 +226,8 @@ export default function BatchDetail() {
               <Badge className={cn(statusColors[batch.status], 'capitalize')}>
                 {batch.status}
               </Badge>
-              <Badge variant="secondary">{batch.targetExam}</Badge>
-              {batch.tags.slice(0, 3).map(tag => (
+              <Badge variant="secondary">{batch.target_exam}</Badge>
+              {(batch.tags || []).slice(0, 3).map(tag => (
                 <Badge key={tag} variant="outline" className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground">
                   {tag}
                 </Badge>
@@ -99,11 +239,11 @@ export default function BatchDetail() {
             <div className="flex flex-wrap gap-4 text-sm text-primary-foreground/80">
               <div className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" />
-                Started: {new Date(batch.startDate).toLocaleDateString()}
+                Started: {batch.start_date ? new Date(batch.start_date).toLocaleDateString() : 'TBD'}
               </div>
               <div className="flex items-center gap-1.5">
                 <Users className="w-4 h-4" />
-                {batch.studentIds.length} students enrolled
+                {studentCount} students enrolled
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4" />
@@ -123,7 +263,16 @@ export default function BatchDetail() {
                 <Lock className="w-5 h-5 text-accent" />
                 <span className="font-medium">You are not enrolled in this batch</span>
               </div>
-              <Button className="gradient-accent">Request Access</Button>
+              {user ? (
+                <Button className="gradient-accent" onClick={() => setPasswordModalOpen(true)}>
+                  <Key className="w-4 h-4 mr-2" />
+                  Enter Access Password
+                </Button>
+              ) : (
+                <Link to="/auth">
+                  <Button className="gradient-accent">Sign in to Enroll</Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -208,6 +357,7 @@ export default function BatchDetail() {
                           size="sm"
                           variant="outline"
                           disabled={!enrolled}
+                          onClick={() => enrolled && lecture.notes_url && window.open(lecture.notes_url, '_blank')}
                         >
                           <Download className="w-4 h-4 mr-2" />
                           Download
@@ -241,6 +391,7 @@ export default function BatchDetail() {
                           size="sm"
                           variant="outline"
                           disabled={!enrolled}
+                          onClick={() => enrolled && lecture.dpp_url && window.open(lecture.dpp_url, '_blank')}
                         >
                           <Download className="w-4 h-4 mr-2" />
                           Download
@@ -272,6 +423,7 @@ export default function BatchDetail() {
                       variant="outline"
                       className="w-full"
                       disabled={!enrolled}
+                      onClick={() => enrolled && lecture.special_module_url && window.open(lecture.special_module_url, '_blank')}
                     >
                       <Download className="w-4 h-4 mr-2" />
                       Download Material
@@ -288,7 +440,7 @@ export default function BatchDetail() {
               <p className="text-muted-foreground">No timetable available for this batch</p>
             ) : (
               <div>
-                <h3 className="text-xl font-semibold mb-4">{timetable.weekRange}</h3>
+                <h3 className="text-xl font-semibold mb-4">{timetable.week_range}</h3>
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -320,6 +472,40 @@ export default function BatchDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Password Modal */}
+      <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Enter Access Password</DialogTitle>
+            <DialogDescription>
+              Enter the batch access password provided by your instructor to enroll in this batch.
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              enrollMutation.mutate(accessPassword);
+            }}
+            className="space-y-4"
+          >
+            <div className="space-y-2">
+              <Label htmlFor="password">Access Password</Label>
+              <Input
+                id="password"
+                type="text"
+                value={accessPassword}
+                onChange={(e) => setAccessPassword(e.target.value)}
+                placeholder="Enter password..."
+                required
+              />
+            </div>
+            <Button type="submit" className="w-full" disabled={enrollMutation.isPending}>
+              {enrollMutation.isPending ? 'Enrolling...' : 'Enroll Now'}
+            </Button>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

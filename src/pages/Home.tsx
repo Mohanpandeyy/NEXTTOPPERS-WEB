@@ -2,7 +2,8 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, BookOpen, Users, Award, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BatchCard from '@/components/cards/BatchCard';
-import { useData } from '@/contexts/DataContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 const categories = [
   { name: 'JEE', icon: '🎯', color: 'bg-blue-500/10 text-blue-600' },
@@ -21,8 +22,18 @@ const stats = [
 ];
 
 export default function Home() {
-  const { batches } = useData();
-  const featuredBatches = batches.filter(b => b.visibility === 'public').slice(0, 4);
+  const { data: batches = [] } = useQuery({
+    queryKey: ['public-batches'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('*')
+        .eq('visibility', 'public')
+        .limit(4);
+      if (error) throw error;
+      return data || [];
+    },
+  });
 
   return (
     <div className="min-h-screen">
@@ -124,7 +135,7 @@ export default function Home() {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredBatches.map((batch, i) => (
+            {batches.map((batch, i) => (
               <div
                 key={batch.id}
                 className="animate-fade-in"
