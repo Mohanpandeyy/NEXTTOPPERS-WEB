@@ -19,6 +19,7 @@ import AdminUsersNew from "@/pages/admin/AdminUsersNew";
 import AdminMedia from "@/pages/admin/AdminMedia";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminBatchPasswords from "@/pages/admin/AdminBatchPasswords";
+import AdminCustomSections from "@/pages/admin/AdminCustomSections";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="timetables" element={<AdminTimetables />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="passwords" element={<AdminBatchPasswords />} />
+              <Route path="sections" element={<AdminCustomSections />} />
               <Route path="media" element={<AdminMedia />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>
