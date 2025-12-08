@@ -124,6 +124,88 @@ export type Database = {
         }
         Relationships: []
       }
+      custom_section_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          file_url: string | null
+          id: string
+          section_id: string
+          sort_order: number | null
+          subject: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          section_id: string
+          sort_order?: number | null
+          subject?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          file_url?: string | null
+          id?: string
+          section_id?: string
+          sort_order?: number | null
+          subject?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_section_items_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "custom_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_sections: {
+        Row: {
+          batch_id: string
+          content_type: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          content_type?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          content_type?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_sections_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           batch_id: string
