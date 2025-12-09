@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Search, UserCog, Shield, GraduationCap } from 'lucide-react';
+import { Search, UserCog, Shield, GraduationCap, ShieldAlert } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -66,12 +66,14 @@ interface UserWithDetails {
   profile: Profile;
   role: 'admin' | 'student';
   enrolledBatches: string[];
+  isProtected: boolean;
 }
 
 export default function AdminUsersNew() {
   const { toast } = useToast();
   const [users, setUsers] = useState<UserWithDetails[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [protectedEmails, setProtectedEmails] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRole, setFilterRole] = useState<string>('all');
@@ -88,6 +90,14 @@ export default function AdminUsersNew() {
 
   const fetchData = async () => {
     try {
+      // Fetch protected admins first
+      const { data: protectedData } = await supabase
+        .from('protected_admins')
+        .select('email');
+      
+      const protectedEmailsList = (protectedData || []).map(p => p.email);
+      setProtectedEmails(protectedEmailsList);
+
       // Fetch profiles
       const { data: profiles, error: profilesError } = await supabase
         .from('profiles')
@@ -133,6 +143,7 @@ export default function AdminUsersNew() {
         profile,
         role: (rolesMap.get(profile.user_id) as 'admin' | 'student') || 'student',
         enrolledBatches: enrollmentsMap.get(profile.user_id) || [],
+        isProtected: protectedEmailsList.includes(profile.email),
       }));
 
       setUsers(usersWithDetails);
@@ -182,12 +193,27 @@ export default function AdminUsersNew() {
   };
 
   const handleOpenRoleChange = (user: UserWithDetails) => {
+    if (user.isProtected) {
+      toast({ 
+        title: 'Protected Admin', 
+        description: 'This admin cannot be demoted. They are permanently protected.', 
+        variant: 'destructive' 
+      });
+      return;
+    }
     setSelectedUser(user);
     setIsRoleChangeOpen(true);
   };
 
   const handleToggleRole = async () => {
     if (!selectedUser) return;
+    
+    // Double check protection
+    if (selectedUser.isProtected) {
+      toast({ title: 'Error', description: 'Cannot modify protected admin', variant: 'destructive' });
+      setIsRoleChangeOpen(false);
+      return;
+    }
 
     const newRole = selectedUser.role === 'admin' ? 'student' : 'admin';
 
@@ -292,7 +318,9 @@ export default function AdminUsersNew() {
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        {user.role === 'admin' ? (
+                        {user.isProtected ? (
+                          <ShieldAlert className="w-4 h-4 text-yellow-500" />
+                        ) : user.role === 'admin' ? (
                           <Shield className="w-4 h-4 text-primary" />
                         ) : (
                           <GraduationCap className="w-4 h-4 text-primary" />
@@ -303,9 +331,16 @@ export default function AdminUsersNew() {
                   </TableCell>
                   <TableCell>{user.profile.email}</TableCell>
                   <TableCell>
-                    <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                      {user.role}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                        {user.role}
+                      </Badge>
+                      {user.isProtected && (
+                        <Badge variant="outline" className="text-yellow-600 border-yellow-500">
+                          Protected
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-1">
@@ -338,6 +373,8 @@ export default function AdminUsersNew() {
                         variant="outline"
                         size="sm"
                         onClick={() => handleOpenRoleChange(user)}
+                        disabled={user.isProtected}
+                        title={user.isProtected ? 'Protected admin cannot be modified' : 'Change role'}
                       >
                         <UserCog className="w-4 h-4" />
                       </Button>
