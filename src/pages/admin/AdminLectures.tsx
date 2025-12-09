@@ -4,7 +4,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import {
   Table,
@@ -89,7 +88,6 @@ export default function AdminLectures() {
     subject: 'Physics',
     teacher_name: '',
     date_time: '',
-    duration_minutes: 60,
     video_type: 'recorded' as 'live' | 'recorded',
     video_url: '',
     notes_url: '',
@@ -100,8 +98,11 @@ export default function AdminLectures() {
     is_locked: false,
   });
 
-  // Video upload state
+  // Upload type states
   const [videoUploadType, setVideoUploadType] = useState<'url' | 'upload'>('url');
+  const [notesUploadType, setNotesUploadType] = useState<'url' | 'upload'>('url');
+  const [dppUploadType, setDppUploadType] = useState<'url' | 'upload'>('url');
+  const [specialUploadType, setSpecialUploadType] = useState<'url' | 'upload'>('url');
   const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
@@ -146,7 +147,6 @@ export default function AdminLectures() {
       const fileExt = file.name.split('.').pop();
       const fileName = `${type}/${Date.now()}.${fileExt}`;
       
-      // Use 'videos' bucket for video files, 'media' for others
       const bucket = type === 'video' ? 'videos' : 'media';
       
       const { error: uploadError } = await supabase.storage
@@ -180,7 +180,7 @@ export default function AdminLectures() {
     }
   };
 
-  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'notes_url' | 'dpp_url' | 'special_module_url') => {
+  const handlePdfFileChange = async (e: React.ChangeEvent<HTMLInputElement>, field: 'notes_url' | 'dpp_url' | 'special_module_url') => {
     const file = e.target.files?.[0];
     if (!file) return;
     
@@ -199,7 +199,6 @@ export default function AdminLectures() {
       subject: 'Physics',
       teacher_name: '',
       date_time: '',
-      duration_minutes: 60,
       video_type: 'recorded',
       video_url: '',
       notes_url: '',
@@ -210,6 +209,9 @@ export default function AdminLectures() {
       is_locked: false,
     });
     setVideoUploadType('url');
+    setNotesUploadType('url');
+    setDppUploadType('url');
+    setSpecialUploadType('url');
     setEditingLecture(null);
   };
 
@@ -226,7 +228,6 @@ export default function AdminLectures() {
       subject: lecture.subject,
       teacher_name: lecture.teacher_name,
       date_time: lecture.date_time ? new Date(lecture.date_time).toISOString().slice(0, 16) : '',
-      duration_minutes: lecture.duration_minutes,
       video_type: lecture.video_type,
       video_url: lecture.video_url || '',
       notes_url: lecture.notes_url || '',
@@ -252,7 +253,7 @@ export default function AdminLectures() {
         subject: formData.subject,
         teacher_name: formData.teacher_name,
         date_time: formData.date_time || null,
-        duration_minutes: formData.duration_minutes,
+        duration_minutes: 60, // Default duration, auto-detect not easily possible without backend
         video_type: formData.video_type,
         video_url: formData.video_url || null,
         notes_url: formData.notes_url || null,
@@ -385,7 +386,6 @@ export default function AdminLectures() {
               <TableHead>Subject</TableHead>
               <TableHead>Batch</TableHead>
               <TableHead>Teacher</TableHead>
-              <TableHead>Duration</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Resources</TableHead>
               <TableHead className="text-right">Actions</TableHead>
@@ -394,7 +394,7 @@ export default function AdminLectures() {
           <TableBody>
             {filteredLectures.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No lectures found
                 </TableCell>
               </TableRow>
@@ -410,7 +410,6 @@ export default function AdminLectures() {
                   <TableCell>{lecture.subject}</TableCell>
                   <TableCell>{getBatchName(lecture.batch_id)}</TableCell>
                   <TableCell>{lecture.teacher_name}</TableCell>
-                  <TableCell>{lecture.duration_minutes} min</TableCell>
                   <TableCell>
                     <Badge variant={lecture.video_type === 'live' ? 'default' : 'secondary'}>
                       {lecture.video_type}
@@ -503,17 +502,6 @@ export default function AdminLectures() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Duration (minutes)</Label>
-                <Input
-                  type="number"
-                  value={formData.duration_minutes}
-                  onChange={(e) => setFormData(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 60 }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
                 <Label>Date & Time</Label>
                 <Input
                   type="datetime-local"
@@ -521,18 +509,19 @@ export default function AdminLectures() {
                   onChange={(e) => setFormData(prev => ({ ...prev, date_time: e.target.value }))}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Video Type</Label>
-                <Select value={formData.video_type} onValueChange={(v: 'live' | 'recorded') => setFormData(prev => ({ ...prev, video_type: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="recorded">Recorded</SelectItem>
-                    <SelectItem value="live">Live</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Video Type</Label>
+              <Select value={formData.video_type} onValueChange={(v: 'live' | 'recorded') => setFormData(prev => ({ ...prev, video_type: v }))}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recorded">Recorded</SelectItem>
+                  <SelectItem value="live">Live</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Video Upload Section */}
@@ -558,44 +547,97 @@ export default function AdminLectures() {
                     disabled={isUploading}
                   />
                   {formData.video_url && videoUploadType === 'upload' && (
-                    <p className="text-sm text-green-600 mt-1">Video uploaded successfully</p>
+                    <p className="text-sm text-green-600 mt-1">Video uploaded</p>
                   )}
                 </TabsContent>
               </Tabs>
             </div>
 
-            {/* PDF Uploads */}
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label>Notes PDF</Label>
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handlePdfUpload(e, 'notes_url')}
-                  disabled={isUploading}
-                />
-                {formData.notes_url && <p className="text-xs text-green-600">Uploaded</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>DPP PDF</Label>
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handlePdfUpload(e, 'dpp_url')}
-                  disabled={isUploading}
-                />
-                {formData.dpp_url && <p className="text-xs text-green-600">Uploaded</p>}
-              </div>
-              <div className="space-y-2">
-                <Label>Special Module</Label>
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={(e) => handlePdfUpload(e, 'special_module_url')}
-                  disabled={isUploading}
-                />
-                {formData.special_module_url && <p className="text-xs text-green-600">Uploaded</p>}
-              </div>
+            {/* Notes PDF */}
+            <div className="space-y-2">
+              <Label>Notes PDF</Label>
+              <Tabs value={notesUploadType} onValueChange={(v) => setNotesUploadType(v as 'url' | 'upload')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="url"><LinkIcon className="w-4 h-4 mr-2" />URL</TabsTrigger>
+                  <TabsTrigger value="upload"><Upload className="w-4 h-4 mr-2" />Upload</TabsTrigger>
+                </TabsList>
+                <TabsContent value="url">
+                  <Input
+                    value={formData.notes_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, notes_url: e.target.value }))}
+                    placeholder="https://example.com/notes.pdf"
+                  />
+                </TabsContent>
+                <TabsContent value="upload">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => handlePdfFileChange(e, 'notes_url')}
+                    disabled={isUploading}
+                  />
+                  {formData.notes_url && notesUploadType === 'upload' && (
+                    <p className="text-sm text-green-600 mt-1">Notes uploaded</p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            {/* DPP PDF */}
+            <div className="space-y-2">
+              <Label>DPP PDF</Label>
+              <Tabs value={dppUploadType} onValueChange={(v) => setDppUploadType(v as 'url' | 'upload')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="url"><LinkIcon className="w-4 h-4 mr-2" />URL</TabsTrigger>
+                  <TabsTrigger value="upload"><Upload className="w-4 h-4 mr-2" />Upload</TabsTrigger>
+                </TabsList>
+                <TabsContent value="url">
+                  <Input
+                    value={formData.dpp_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dpp_url: e.target.value }))}
+                    placeholder="https://example.com/dpp.pdf"
+                  />
+                </TabsContent>
+                <TabsContent value="upload">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => handlePdfFileChange(e, 'dpp_url')}
+                    disabled={isUploading}
+                  />
+                  {formData.dpp_url && dppUploadType === 'upload' && (
+                    <p className="text-sm text-green-600 mt-1">DPP uploaded</p>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
+
+            {/* Special Module */}
+            <div className="space-y-2">
+              <Label>Special Module</Label>
+              <Tabs value={specialUploadType} onValueChange={(v) => setSpecialUploadType(v as 'url' | 'upload')}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="url"><LinkIcon className="w-4 h-4 mr-2" />URL</TabsTrigger>
+                  <TabsTrigger value="upload"><Upload className="w-4 h-4 mr-2" />Upload</TabsTrigger>
+                </TabsList>
+                <TabsContent value="url">
+                  <Input
+                    value={formData.special_module_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, special_module_url: e.target.value }))}
+                    placeholder="https://example.com/special.pdf"
+                  />
+                </TabsContent>
+                <TabsContent value="upload">
+                  <Input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => handlePdfFileChange(e, 'special_module_url')}
+                    disabled={isUploading}
+                  />
+                  {formData.special_module_url && specialUploadType === 'upload' && (
+                    <p className="text-sm text-green-600 mt-1">Special module uploaded</p>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
 
             <div className="space-y-2">
@@ -621,7 +663,7 @@ export default function AdminLectures() {
                 checked={formData.is_locked}
                 onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_locked: checked }))}
               />
-              <Label>Locked (requires enrollment)</Label>
+              <Label>Locked (requires access)</Label>
             </div>
           </div>
 

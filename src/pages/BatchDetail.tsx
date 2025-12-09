@@ -1,12 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, Key, BookOpen, ChevronRight } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import LectureCard from '@/components/cards/LectureCard';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,15 +19,17 @@ const statusColors = {
   completed: 'bg-muted text-muted-foreground border-muted',
 };
 
+// Adsterra ad script
+const AD_SCRIPT_URL = 'https://alwingulla.com/88/tag.min.js';
+
 export default function BatchDetail() {
   const { id } = useParams<{ id: string }>();
-  const { user, isAdmin, isEnrolled } = useSupabaseAuth();
+  const { user, isAdmin } = useSupabaseAuth();
   const queryClient = useQueryClient();
   
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [passwordModalOpen, setPasswordModalOpen] = useState(false);
-  const [accessPassword, setAccessPassword] = useState('');
+  const [showingAd, setShowingAd] = useState(false);
 
   // Fetch batch
   const { data: batch, isLoading: batchLoading } = useQuery({
@@ -71,7 +71,6 @@ export default function BatchDetail() {
         .order('sort_order');
       if (sectionsError) throw sectionsError;
       
-      // Fetch items for each section
       const sectionsWithItems = await Promise.all(
         (sections || []).map(async (section) => {
           const { data: items } = await supabase
@@ -126,66 +125,71 @@ export default function BatchDetail() {
     enabled: !!id,
   });
 
-  // Check enrollment
-  const { data: userEnrolled = false } = useQuery({
-    queryKey: ['enrollment', id, user?.id],
+  // Check ad-based access (24 hours)
+  const { data: hasAdAccess = false, refetch: refetchAdAccess } = useQuery({
+    queryKey: ['ad-access', user?.id],
     queryFn: async () => {
-      if (!user || !id) return false;
-      return await isEnrolled(id);
+      if (!user) return false;
+      if (isAdmin) return true;
+      
+      const { data, error } = await supabase
+        .from('ad_access')
+        .select('*')
+        .eq('user_id', user.id)
+        .gt('expires_at', new Date().toISOString())
+        .order('expires_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      return !!data && !error;
     },
-    enabled: !!user && !!id,
+    enabled: !!user,
   });
 
-  // Enroll mutation
-  const enrollMutation = useMutation({
-    mutationFn: async (password: string) => {
-      if (!user || !id) throw new Error('Not authenticated');
+  // Grant access after ad
+  const grantAccessMutation = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error('Not authenticated');
       
-      const { data: passwordData, error: passwordError } = await supabase
-        .from('batch_access_passwords')
-        .select('*')
-        .eq('batch_id', id)
-        .eq('password', password)
-        .eq('is_active', true)
-        .gt('expires_at', new Date().toISOString())
-        .single();
-      
-      if (passwordError || !passwordData) {
-        throw new Error('Invalid or expired password');
-      }
-
-      if (passwordData.current_uses >= passwordData.max_uses) {
-        throw new Error('This password has reached its usage limit');
-      }
-
-      const { error: enrollError } = await supabase
-        .from('enrollments')
+      const { error } = await supabase
+        .from('ad_access')
         .insert({
           user_id: user.id,
-          batch_id: id,
-          enrolled_via_password_id: passwordData.id,
+          expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         });
       
-      if (enrollError) throw enrollError;
-
-      await supabase
-        .from('batch_access_passwords')
-        .update({ current_uses: passwordData.current_uses + 1 })
-        .eq('id', passwordData.id);
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Successfully enrolled!');
-      setPasswordModalOpen(false);
-      setAccessPassword('');
-      queryClient.invalidateQueries({ queryKey: ['enrollment', id] });
-      queryClient.invalidateQueries({ queryKey: ['student-count', id] });
+      toast.success('Access granted for 24 hours!');
+      refetchAdAccess();
+      setShowingAd(false);
     },
-    onError: (error: Error) => {
-      toast.error(error.message);
+    onError: () => {
+      toast.error('Failed to grant access');
     },
   });
 
-  const enrolled = isAdmin || userEnrolled;
+  // Handle watching ad
+  const handleWatchAd = () => {
+    setShowingAd(true);
+    
+    // Load Adsterra ad script
+    const script = document.createElement('script');
+    script.src = AD_SCRIPT_URL;
+    script.setAttribute('data-zone', '9195660');
+    script.async = true;
+    script.setAttribute('data-cfasync', 'false');
+    document.body.appendChild(script);
+    
+    // Simulate ad completion after 10 seconds (in real scenario, this would be triggered by ad completion callback)
+    setTimeout(() => {
+      grantAccessMutation.mutate();
+      script.remove();
+    }, 10000);
+  };
+
+  const hasAccess = isAdmin || hasAdAccess;
   const subjects = [...new Set(lectures.map(l => l.subject))];
 
   // Filter content based on selected subject
@@ -321,23 +325,30 @@ export default function BatchDetail() {
         </div>
       </div>
 
-      {/* Enrollment Banner */}
-      {!enrolled && (
+      {/* Access Banner */}
+      {!hasAccess && (
         <div className="bg-accent/10 border-y border-accent/20">
-          <div className="container mx-auto px-4 py-3">
+          <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4 text-accent" />
-                <span className="text-sm font-medium">You are not enrolled</span>
+                <span className="text-sm font-medium">Watch an ad to unlock all content for 24 hours</span>
               </div>
               {user ? (
-                <Button size="sm" onClick={() => setPasswordModalOpen(true)}>
-                  <Key className="w-4 h-4 mr-2" />
-                  Enter Password
-                </Button>
+                showingAd ? (
+                  <div className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                    <span className="text-sm">Loading ad... Please wait 10 seconds</span>
+                  </div>
+                ) : (
+                  <Button size="sm" onClick={handleWatchAd}>
+                    <Play className="w-4 h-4 mr-2" />
+                    Watch Ad to Unlock
+                  </Button>
+                )
               ) : (
                 <Link to="/auth">
-                  <Button size="sm">Sign in to Enroll</Button>
+                  <Button size="sm">Sign in to Access</Button>
                 </Link>
               )}
             </div>
@@ -396,7 +407,7 @@ export default function BatchDetail() {
                   <div className="space-y-3">
                     {filteredLectures.map((lecture, i) => (
                       <div key={lecture.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.03}s` }}>
-                        <LectureCard lecture={lecture} isEnrolled={enrolled} />
+                        <LectureCard lecture={lecture} isEnrolled={hasAccess} />
                       </div>
                     ))}
                   </div>
@@ -439,8 +450,8 @@ export default function BatchDetail() {
                         notes.map(lecture => (
                           <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
                             <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
-                            <Button size="sm" variant="outline" disabled={!enrolled}
-                              onClick={() => enrolled && lecture.notes_url && window.open(lecture.notes_url, '_blank')}>
+                            <Button size="sm" variant="outline" disabled={!hasAccess}
+                              onClick={() => hasAccess && lecture.notes_url && window.open(lecture.notes_url, '_blank')}>
                               <Download className="w-4 h-4" />
                             </Button>
                           </div>
@@ -460,8 +471,8 @@ export default function BatchDetail() {
                         dpps.map(lecture => (
                           <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
                             <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
-                            <Button size="sm" variant="outline" disabled={!enrolled}
-                              onClick={() => enrolled && lecture.dpp_url && window.open(lecture.dpp_url, '_blank')}>
+                            <Button size="sm" variant="outline" disabled={!hasAccess}
+                              onClick={() => hasAccess && lecture.dpp_url && window.open(lecture.dpp_url, '_blank')}>
                               <Download className="w-4 h-4" />
                             </Button>
                           </div>
@@ -474,7 +485,7 @@ export default function BatchDetail() {
             )}
           </TabsContent>
 
-          {/* Special Material Tab */}
+          {/* Special Materials Tab */}
           <TabsContent value="special" className="space-y-4">
             {!selectedSubject ? (
               <>
@@ -491,134 +502,119 @@ export default function BatchDetail() {
             ) : (
               <>
                 <BackToSubjects />
-                <h3 className="font-semibold text-lg mb-4">{selectedSubject} - Special Material</h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {specialMaterials.map(lecture => (
-                    <Card key={lecture.id}>
-                      <CardContent className="p-4">
-                        <p className="font-medium mb-2">{lecture.title}</p>
-                        <Button size="sm" variant="outline" className="w-full" disabled={!enrolled}
-                          onClick={() => enrolled && lecture.special_module_url && window.open(lecture.special_module_url, '_blank')}>
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
+                <h3 className="font-semibold text-lg mb-4">{selectedSubject} - Special Materials</h3>
+                <div className="space-y-2">
+                  {specialMaterials.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No special materials available</p>
+                  ) : (
+                    specialMaterials.map(lecture => (
+                      <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                        <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
+                        <Button size="sm" variant="outline" disabled={!hasAccess}
+                          onClick={() => hasAccess && lecture.special_module_url && window.open(lecture.special_module_url, '_blank')}>
+                          <Download className="w-4 h-4" />
                         </Button>
-                      </CardContent>
-                    </Card>
-                  ))}
+                      </div>
+                    ))
+                  )}
                 </div>
-                {specialMaterials.length === 0 && (
-                  <p className="text-muted-foreground text-center py-8">No special materials for this subject</p>
-                )}
               </>
             )}
           </TabsContent>
 
           {/* Timetable Tab */}
-          <TabsContent value="timetable">
-            {!timetable ? (
-              <p className="text-muted-foreground text-center py-8">No timetable available</p>
-            ) : (
-              <div>
+          <TabsContent value="timetable" className="space-y-4">
+            {timetable ? (
+              <>
                 {timetable.week_range && (
-                  <h3 className="font-semibold mb-4">{timetable.week_range}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">Week: {timetable.week_range}</p>
                 )}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-secondary">
-                        <th className="p-2 text-left font-medium border">Day</th>
-                        <th className="p-2 text-left font-medium border">Time</th>
-                        <th className="p-2 text-left font-medium border">Subject</th>
-                        <th className="p-2 text-left font-medium border">Topic</th>
-                        <th className="p-2 text-left font-medium border">Teacher</th>
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium">Day</th>
+                        <th className="px-4 py-2 text-left font-medium">Time</th>
+                        <th className="px-4 py-2 text-left font-medium">Subject</th>
+                        <th className="px-4 py-2 text-left font-medium">Topic</th>
+                        <th className="px-4 py-2 text-left font-medium">Teacher</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {timetable.entries.map((entry, i) => (
-                        <tr key={entry.id} className={i % 2 === 0 ? 'bg-card' : 'bg-secondary/30'}>
-                          <td className="p-2 border font-medium">{entry.day}</td>
-                          <td className="p-2 border">{entry.time}</td>
-                          <td className="p-2 border"><Badge variant="outline" className="text-xs">{entry.subject}</Badge></td>
-                          <td className="p-2 border">{entry.topic}</td>
-                          <td className="p-2 border text-muted-foreground">{entry.teacher}</td>
+                      {timetable.entries.map((entry: any, i: number) => (
+                        <tr key={entry.id} className={i % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
+                          <td className="px-4 py-2 font-medium">{entry.day}</td>
+                          <td className="px-4 py-2">{entry.time}</td>
+                          <td className="px-4 py-2">{entry.subject}</td>
+                          <td className="px-4 py-2">{entry.topic || '-'}</td>
+                          <td className="px-4 py-2">{entry.teacher || '-'}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
-              </div>
+              </>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No timetable available</p>
             )}
           </TabsContent>
 
-          {/* Custom Sections Tabs */}
-          {customSections.map(section => (
-            <TabsContent key={section.id} value={`custom-${section.id}`} className="space-y-4">
-              {!selectedSubject ? (
-                <>
-                  <h3 className="font-semibold text-lg">Select Subject</h3>
-                  {(() => {
-                    const sectionSubjects = [...new Set(section.items?.map((item: any) => item.subject).filter(Boolean))];
-                    if (sectionSubjects.length === 0) {
-                      return <p className="text-muted-foreground text-center py-8">No items available</p>;
-                    }
-                    return (
-                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                        {sectionSubjects.map((subject: string) => {
-                          const count = section.items?.filter((item: any) => item.subject === subject).length || 0;
-                          return <SubjectCard key={subject} subject={subject} count={count} />;
-                        })}
-                      </div>
-                    );
-                  })()}
-                </>
-              ) : (
-                <>
-                  <BackToSubjects />
-                  <h3 className="font-semibold text-lg mb-4">{selectedSubject} - {section.name}</h3>
-                  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {section.items?.filter((item: any) => item.subject === selectedSubject).map((item: any) => (
-                      <Card key={item.id}>
-                        <CardContent className="p-4">
-                          <p className="font-medium mb-1">{item.title}</p>
-                          {item.description && <p className="text-sm text-muted-foreground mb-2">{item.description}</p>}
-                          {item.file_url && (
-                            <Button size="sm" variant="outline" className="w-full" disabled={!enrolled}
-                              onClick={() => enrolled && window.open(item.file_url, '_blank')}>
-                              <Download className="w-4 h-4 mr-2" />
-                              Download
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </>
-              )}
-            </TabsContent>
-          ))}
+          {/* Custom Section Tabs */}
+          {customSections.map(section => {
+            const sectionSubjects = [...new Set((section.items || []).map((item: any) => item.subject).filter(Boolean))];
+            const filteredItems = selectedSubject 
+              ? (section.items || []).filter((item: any) => item.subject === selectedSubject)
+              : section.items || [];
+
+            return (
+              <TabsContent key={section.id} value={`custom-${section.id}`} className="space-y-4">
+                {sectionSubjects.length > 0 && !selectedSubject ? (
+                  <>
+                    <h3 className="font-semibold text-lg">Select Subject</h3>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {sectionSubjects.map(subject => {
+                        const count = (section.items || []).filter((item: any) => item.subject === subject).length;
+                        return (
+                          <SubjectCard key={subject as string} subject={subject as string} count={count} />
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {selectedSubject && <BackToSubjects />}
+                    <h3 className="font-semibold text-lg mb-4">
+                      {selectedSubject ? `${selectedSubject} - ${section.name}` : section.name}
+                    </h3>
+                    <div className="space-y-2">
+                      {filteredItems.length === 0 ? (
+                        <p className="text-muted-foreground text-center py-8">No items available</p>
+                      ) : (
+                        filteredItems.map((item: any) => (
+                          <div key={item.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
+                            <div className="flex-1 mr-2">
+                              <p className="font-medium text-sm">{item.title}</p>
+                              {item.description && (
+                                <p className="text-xs text-muted-foreground mt-1">{item.description}</p>
+                              )}
+                            </div>
+                            {item.file_url && (
+                              <Button size="sm" variant="outline" disabled={!hasAccess}
+                                onClick={() => hasAccess && window.open(item.file_url, '_blank')}>
+                                <Download className="w-4 h-4" />
+                              </Button>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </>
+                )}
+              </TabsContent>
+            );
+          })}
         </Tabs>
       </div>
-
-      {/* Password Modal */}
-      <Dialog open={passwordModalOpen} onOpenChange={setPasswordModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Enter Access Password</DialogTitle>
-            <DialogDescription>
-              Enter the batch access password to enroll.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); enrollMutation.mutate(accessPassword); }} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">Access Password</Label>
-              <Input id="password" value={accessPassword} onChange={(e) => setAccessPassword(e.target.value)} placeholder="Enter password..." required />
-            </div>
-            <Button type="submit" className="w-full" disabled={enrollMutation.isPending}>
-              {enrollMutation.isPending ? 'Enrolling...' : 'Enroll Now'}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
