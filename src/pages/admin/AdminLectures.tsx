@@ -57,6 +57,7 @@ interface Lecture {
   thumbnail_url: string | null;
   topic_tags: string[];
   is_locked: boolean;
+  is_basic: boolean;
 }
 
 interface Batch {
@@ -96,6 +97,7 @@ export default function AdminLectures() {
     thumbnail_url: '',
     topic_tags: '',
     is_locked: false,
+    is_basic: false,
   });
 
   // Upload type states
@@ -207,6 +209,7 @@ export default function AdminLectures() {
       thumbnail_url: '',
       topic_tags: '',
       is_locked: false,
+      is_basic: false,
     });
     setVideoUploadType('url');
     setNotesUploadType('url');
@@ -236,6 +239,7 @@ export default function AdminLectures() {
       thumbnail_url: lecture.thumbnail_url || '',
       topic_tags: lecture.topic_tags?.join(', ') || '',
       is_locked: lecture.is_locked,
+      is_basic: lecture.is_basic || false,
     });
     setIsFormOpen(true);
   };
@@ -253,7 +257,7 @@ export default function AdminLectures() {
         subject: formData.subject,
         teacher_name: formData.teacher_name,
         date_time: formData.date_time || null,
-        duration_minutes: 60, // Default duration, auto-detect not easily possible without backend
+        duration_minutes: 60,
         video_type: formData.video_type,
         video_url: formData.video_url || null,
         notes_url: formData.notes_url || null,
@@ -262,6 +266,7 @@ export default function AdminLectures() {
         thumbnail_url: formData.thumbnail_url || null,
         topic_tags: formData.topic_tags.split(',').map(t => t.trim()).filter(Boolean),
         is_locked: formData.is_locked,
+        is_basic: formData.is_basic,
       };
 
       if (editingLecture) {
@@ -658,12 +663,21 @@ export default function AdminLectures() {
               />
             </div>
 
-            <div className="flex items-center gap-2">
-              <Switch
-                checked={formData.is_locked}
-                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_locked: checked }))}
-              />
-              <Label>Locked (requires access)</Label>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.is_locked}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_locked: checked }))}
+                />
+                <Label>Locked (requires premium)</Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.is_basic}
+                  onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_basic: checked }))}
+                />
+                <Label>Basic (free access)</Label>
+              </div>
             </div>
           </div>
 

@@ -274,6 +274,7 @@ export type Database = {
           dpp_url: string | null
           duration_minutes: number
           id: string
+          is_basic: boolean
           is_locked: boolean
           notes_url: string | null
           special_module_url: string | null
@@ -293,6 +294,7 @@ export type Database = {
           dpp_url?: string | null
           duration_minutes?: number
           id?: string
+          is_basic?: boolean
           is_locked?: boolean
           notes_url?: string | null
           special_module_url?: string | null
@@ -312,6 +314,7 @@ export type Database = {
           dpp_url?: string | null
           duration_minutes?: number
           id?: string
+          is_basic?: boolean
           is_locked?: boolean
           notes_url?: string | null
           special_module_url?: string | null
@@ -414,6 +417,7 @@ export type Database = {
           created_at: string
           day: string
           id: string
+          image_url: string | null
           lecture_id: string | null
           subject: string
           teacher: string | null
@@ -425,6 +429,7 @@ export type Database = {
           created_at?: string
           day: string
           id?: string
+          image_url?: string | null
           lecture_id?: string | null
           subject: string
           teacher?: string | null
@@ -436,6 +441,7 @@ export type Database = {
           created_at?: string
           day?: string
           id?: string
+          image_url?: string | null
           lecture_id?: string | null
           subject?: string
           teacher?: string | null

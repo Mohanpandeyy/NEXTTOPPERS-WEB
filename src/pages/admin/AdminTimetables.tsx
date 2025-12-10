@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Calendar } from 'lucide-react';
+import { Plus, Pencil, Trash2, Calendar, Upload, Image } from 'lucide-react';
 
 interface Batch {
   id: string;
@@ -53,6 +53,7 @@ interface TimetableEntry {
   topic: string | null;
   teacher: string | null;
   lecture_id: string | null;
+  image_url: string | null;
 }
 
 interface Timetable {
@@ -85,7 +86,9 @@ export default function AdminTimetables() {
     subject: 'Physics',
     topic: '',
     teacher: '',
+    image_url: '',
   });
+  const [isUploading, setIsUploading] = useState(false);
 
   // Week range form
   const [weekRange, setWeekRange] = useState('');
@@ -190,8 +193,38 @@ export default function AdminTimetables() {
       subject: 'Physics',
       topic: '',
       teacher: '',
+      image_url: '',
     });
     setEditingEntry(null);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `timetable/${Date.now()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('media')
+        .upload(fileName, file);
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('media')
+        .getPublicUrl(fileName);
+      
+      setFormData(prev => ({ ...prev, image_url: publicUrl }));
+      toast({ title: 'Success', description: 'Image uploaded' });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: 'Error', description: 'Failed to upload image', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleOpenCreate = () => {
@@ -207,6 +240,7 @@ export default function AdminTimetables() {
       subject: entry.subject,
       topic: entry.topic || '',
       teacher: entry.teacher || '',
+      image_url: entry.image_url || '',
     });
     setIsFormOpen(true);
   };
@@ -222,6 +256,7 @@ export default function AdminTimetables() {
         subject: formData.subject,
         topic: formData.topic || null,
         teacher: formData.teacher || null,
+        image_url: formData.image_url || null,
       };
 
       if (editingEntry) {
@@ -448,6 +483,22 @@ export default function AdminTimetables() {
                 onChange={(e) => setFormData(prev => ({ ...prev, teacher: e.target.value }))}
                 placeholder="Dr. John Doe"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Timetable Image (Optional)</Label>
+              <div className="flex gap-2">
+                <Input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={isUploading}
+                />
+              </div>
+              {formData.image_url && (
+                <img src={formData.image_url} alt="Timetable" className="mt-2 max-h-32 rounded-lg border" />
+              )}
+              <p className="text-xs text-muted-foreground">Upload an image instead of text entries</p>
             </div>
           </div>
 
