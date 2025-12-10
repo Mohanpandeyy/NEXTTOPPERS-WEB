@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import LectureCard from '@/components/cards/LectureCard';
+import PremiumAccessPopup from '@/components/PremiumAccessPopup';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -25,11 +26,22 @@ const AD_SCRIPT_URL = 'https://alwingulla.com/88/tag.min.js';
 export default function BatchDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, isAdmin } = useSupabaseAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [showingAd, setShowingAd] = useState(false);
+  const [showPremiumPopup, setShowPremiumPopup] = useState(false);
+  const [accessMode, setAccessMode] = useState<'premium' | 'basic' | null>(null);
+  const [pendingVideoLecture, setPendingVideoLecture] = useState<any>(null);
+
+  // Redirect to auth if not logged in
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
 
   // Fetch batch
   const { data: batch, isLoading: batchLoading } = useQuery({
@@ -43,6 +55,7 @@ export default function BatchDetail() {
       if (error) throw error;
       return data;
     },
+    enabled: !!user,
   });
 
   // Fetch lectures
@@ -57,7 +70,7 @@ export default function BatchDetail() {
       if (error) throw error;
       return data || [];
     },
-    enabled: !!id,
+    enabled: !!id && !!user,
   });
 
   // Fetch custom sections
@@ -83,7 +96,7 @@ export default function BatchDetail() {
       );
       return sectionsWithItems;
     },
-    enabled: !!id,
+    enabled: !!id && !!user,
   });
 
   // Fetch timetable
@@ -108,7 +121,7 @@ export default function BatchDetail() {
       if (entriesError) throw entriesError;
       return { ...timetableData, entries: entries || [] };
     },
-    enabled: !!id,
+    enabled: !!id && !!user,
   });
 
   // Fetch student count
@@ -122,7 +135,7 @@ export default function BatchDetail() {
       if (error) throw error;
       return count || 0;
     },
-    enabled: !!id,
+    enabled: !!id && !!user,
   });
 
   // Check ad-based access (24 hours)
@@ -161,38 +174,66 @@ export default function BatchDetail() {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success('Access granted for 24 hours!');
+      toast.success('Premium access granted for 24 hours!');
       refetchAdAccess();
       setShowingAd(false);
+      setAccessMode('premium');
     },
     onError: () => {
       toast.error('Failed to grant access');
     },
   });
 
-  // Handle watching ad
-  const handleWatchAd = () => {
+  // Handle premium access - open shortener link
+  const handleGetPremium = () => {
+    setShowPremiumPopup(false);
     setShowingAd(true);
     
-    // Load Adsterra ad script
-    const script = document.createElement('script');
-    script.src = AD_SCRIPT_URL;
-    script.setAttribute('data-zone', '9195660');
-    script.async = true;
-    script.setAttribute('data-cfasync', 'false');
-    document.body.appendChild(script);
+    // Open the shortener link in new tab
+    window.open('https://your-shortener-link.com', '_blank');
     
-    // Simulate ad completion after 10 seconds (in real scenario, this would be triggered by ad completion callback)
+    // Grant access after redirect (simulated - in real scenario this would be callback-based)
     setTimeout(() => {
       grantAccessMutation.mutate();
-      script.remove();
-    }, 10000);
+    }, 5000);
   };
 
-  const hasAccess = isAdmin || hasAdAccess;
-  const subjects = [...new Set(lectures.map(l => l.subject))];
+  // Handle basic access
+  const handleStartBasic = () => {
+    setShowPremiumPopup(false);
+    setAccessMode('basic');
+    toast.info('Basic mode enabled. Only free lectures are available.');
+  };
 
-  // Filter content based on selected subject
+  // Handle video click - show popup if no access
+  const handleVideoClick = (lecture: any) => {
+    if (isAdmin || hasAdAccess) {
+      // Direct access for admin/premium
+      return true;
+    }
+    
+    if (accessMode === 'basic') {
+      // Check if lecture is basic
+      if (lecture.is_basic) {
+        return true;
+      } else {
+        toast.error('This lecture requires premium access');
+        return false;
+      }
+    }
+    
+    // Show popup
+    setPendingVideoLecture(lecture);
+    setShowPremiumPopup(true);
+    return false;
+  };
+
+  const hasAccess = isAdmin || hasAdAccess || accessMode === 'premium';
+  const hasBasicAccess = accessMode === 'basic';
+  const subjects = [...new Set(lectures.map(l => l.subject))];
+  const hasBasicContent = lectures.some(l => l.is_basic);
+
+  // Filter content based on selected subject and access mode
   const filteredLectures = lectures.filter((lecture) => {
     if (selectedSubject && lecture.subject !== selectedSubject) return false;
     if (searchQuery) {
@@ -202,6 +243,8 @@ export default function BatchDetail() {
         return false;
       }
     }
+    // In basic mode, only show basic lectures
+    if (hasBasicAccess && !hasAccess && !lecture.is_basic) return false;
     return true;
   });
 
@@ -258,6 +301,10 @@ export default function BatchDetail() {
     }).filter(s => s.count > 0);
   };
 
+  if (!user) {
+    return null;
+  }
+
   if (batchLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -303,6 +350,12 @@ export default function BatchDetail() {
                 {batch.status}
               </Badge>
               <Badge variant="secondary" className="text-xs">{batch.target_exam}</Badge>
+              {accessMode === 'basic' && (
+                <Badge variant="outline" className="text-xs bg-secondary/50">Basic Mode</Badge>
+              )}
+              {hasAdAccess && (
+                <Badge className="text-xs bg-primary">Premium Active</Badge>
+              )}
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-primary-foreground mb-2">
               {batch.name}
@@ -326,30 +379,24 @@ export default function BatchDetail() {
       </div>
 
       {/* Access Banner */}
-      {!hasAccess && (
+      {!hasAccess && !hasBasicAccess && (
         <div className="bg-accent/10 border-y border-accent/20">
           <div className="container mx-auto px-4 py-4">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2">
                 <Lock className="w-4 h-4 text-accent" />
-                <span className="text-sm font-medium">Watch an ad to unlock all content for 24 hours</span>
+                <span className="text-sm font-medium">Choose your access level to start learning</span>
               </div>
-              {user ? (
-                showingAd ? (
-                  <div className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                    <span className="text-sm">Loading ad... Please wait 10 seconds</span>
-                  </div>
-                ) : (
-                  <Button size="sm" onClick={handleWatchAd}>
-                    <Play className="w-4 h-4 mr-2" />
-                    Watch Ad to Unlock
-                  </Button>
-                )
+              {showingAd ? (
+                <div className="flex items-center gap-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                  <span className="text-sm">Verifying... Please wait</span>
+                </div>
               ) : (
-                <Link to="/auth">
-                  <Button size="sm">Sign in to Access</Button>
-                </Link>
+                <Button size="sm" onClick={() => setShowPremiumPopup(true)}>
+                  <Play className="w-4 h-4 mr-2" />
+                  Get Access
+                </Button>
               )}
             </div>
           </div>
@@ -407,7 +454,11 @@ export default function BatchDetail() {
                   <div className="space-y-3">
                     {filteredLectures.map((lecture, i) => (
                       <div key={lecture.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.03}s` }}>
-                        <LectureCard lecture={lecture} isEnrolled={hasAccess} />
+                        <LectureCard 
+                          lecture={lecture} 
+                          isEnrolled={hasAccess || (hasBasicAccess && lecture.is_basic)}
+                          onVideoClick={() => handleVideoClick(lecture)}
+                        />
                       </div>
                     ))}
                   </div>
@@ -450,8 +501,8 @@ export default function BatchDetail() {
                         notes.map(lecture => (
                           <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
                             <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
-                            <Button size="sm" variant="outline" disabled={!hasAccess}
-                              onClick={() => hasAccess && lecture.notes_url && window.open(lecture.notes_url, '_blank')}>
+                            <Button size="sm" variant="outline" disabled={!hasAccess && !hasBasicAccess}
+                              onClick={() => (hasAccess || hasBasicAccess) && lecture.notes_url && window.open(lecture.notes_url, '_blank')}>
                               <Download className="w-4 h-4" />
                             </Button>
                           </div>
@@ -471,8 +522,8 @@ export default function BatchDetail() {
                         dpps.map(lecture => (
                           <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
                             <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
-                            <Button size="sm" variant="outline" disabled={!hasAccess}
-                              onClick={() => hasAccess && lecture.dpp_url && window.open(lecture.dpp_url, '_blank')}>
+                            <Button size="sm" variant="outline" disabled={!hasAccess && !hasBasicAccess}
+                              onClick={() => (hasAccess || hasBasicAccess) && lecture.dpp_url && window.open(lecture.dpp_url, '_blank')}>
                               <Download className="w-4 h-4" />
                             </Button>
                           </div>
@@ -529,29 +580,32 @@ export default function BatchDetail() {
                 {timetable.week_range && (
                   <p className="text-sm text-muted-foreground mb-4">Week: {timetable.week_range}</p>
                 )}
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-4 py-2 text-left font-medium">Day</th>
-                        <th className="px-4 py-2 text-left font-medium">Time</th>
-                        <th className="px-4 py-2 text-left font-medium">Subject</th>
-                        <th className="px-4 py-2 text-left font-medium">Topic</th>
-                        <th className="px-4 py-2 text-left font-medium">Teacher</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {timetable.entries.map((entry: any, i: number) => (
-                        <tr key={entry.id} className={i % 2 === 0 ? 'bg-background' : 'bg-muted/20'}>
-                          <td className="px-4 py-2 font-medium">{entry.day}</td>
-                          <td className="px-4 py-2">{entry.time}</td>
-                          <td className="px-4 py-2">{entry.subject}</td>
-                          <td className="px-4 py-2">{entry.topic || '-'}</td>
-                          <td className="px-4 py-2">{entry.teacher || '-'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="grid gap-4">
+                  {timetable.entries.map((entry: any) => (
+                    <div key={entry.id} className="bg-card rounded-lg border overflow-hidden">
+                      {entry.image_url ? (
+                        <img 
+                          src={entry.image_url} 
+                          alt={`${entry.day} - ${entry.subject}`}
+                          className="w-full h-auto object-contain"
+                        />
+                      ) : (
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-semibold">{entry.day}</p>
+                              <p className="text-sm text-muted-foreground">{entry.time}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-medium text-primary">{entry.subject}</p>
+                              {entry.topic && <p className="text-sm text-muted-foreground">{entry.topic}</p>}
+                              {entry.teacher && <p className="text-xs text-muted-foreground">by {entry.teacher}</p>}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </>
             ) : (
@@ -615,6 +669,15 @@ export default function BatchDetail() {
           })}
         </Tabs>
       </div>
+
+      {/* Premium Access Popup */}
+      <PremiumAccessPopup
+        isOpen={showPremiumPopup}
+        onClose={() => setShowPremiumPopup(false)}
+        onGetPremium={handleGetPremium}
+        onStartBasic={handleStartBasic}
+        hasBasicContent={hasBasicContent}
+      />
     </div>
   );
 }

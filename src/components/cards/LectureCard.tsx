@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, FileText, Download, Lock, Clock, User } from 'lucide-react';
+import { Play, FileText, Download, Lock, Clock, User, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tables } from '@/integrations/supabase/types';
@@ -9,13 +9,19 @@ import VideoPlayer from '@/components/VideoPlayer';
 interface LectureCardProps {
   lecture: Tables<'lectures'>;
   isEnrolled: boolean;
+  onVideoClick?: () => boolean;
 }
 
-export default function LectureCard({ lecture, isEnrolled }: LectureCardProps) {
+export default function LectureCard({ lecture, isEnrolled, onVideoClick }: LectureCardProps) {
   const [showPlayer, setShowPlayer] = useState(false);
   const isLocked = lecture.is_locked && !isEnrolled;
 
   const handleWatch = () => {
+    if (onVideoClick) {
+      const canPlay = onVideoClick();
+      if (!canPlay) return;
+    }
+    
     if (!isLocked && lecture.video_url) {
       setShowPlayer(true);
     }
@@ -60,6 +66,11 @@ export default function LectureCard({ lecture, isEnrolled }: LectureCardProps) {
             >
               {lecture.video_type}
             </Badge>
+            {lecture.is_basic && (
+              <Badge className="absolute top-2 right-2 text-xs bg-green-500 text-white">
+                Free
+              </Badge>
+            )}
           </div>
 
           <div className="flex-1 p-3">
