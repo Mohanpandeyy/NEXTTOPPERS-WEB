@@ -1,15 +1,15 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap, Key, FolderPlus } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap, FolderPlus, Layers } from 'lucide-react';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { cn } from '@/lib/utils';
 
 const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/batches', label: 'Batches', icon: BookOpen },
+  { href: '/admin/subjects', label: 'Subjects', icon: Layers },
   { href: '/admin/lectures', label: 'Lectures', icon: Video },
   { href: '/admin/timetables', label: 'Timetables', icon: Calendar },
   { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/passwords', label: 'Access Passwords', icon: Key },
   { href: '/admin/sections', label: 'Custom Sections', icon: FolderPlus },
   { href: '/admin/media', label: 'Media', icon: Image },
   { href: '/admin/settings', label: 'Settings', icon: Settings },

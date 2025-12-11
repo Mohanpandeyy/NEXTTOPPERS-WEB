@@ -20,9 +20,6 @@ const statusColors = {
   completed: 'bg-muted text-muted-foreground border-muted',
 };
 
-// Adsterra ad script
-const AD_SCRIPT_URL = 'https://alwingulla.com/88/tag.min.js';
-
 export default function BatchDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, isAdmin } = useSupabaseAuth();
@@ -34,7 +31,6 @@ export default function BatchDetail() {
   const [showingAd, setShowingAd] = useState(false);
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [accessMode, setAccessMode] = useState<'premium' | 'basic' | null>(null);
-  const [pendingVideoLecture, setPendingVideoLecture] = useState<any>(null);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -107,9 +103,9 @@ export default function BatchDetail() {
         .from('timetables')
         .select('*')
         .eq('batch_id', id)
-        .single();
+        .maybeSingle();
       
-      if (timetableError && timetableError.code !== 'PGRST116') throw timetableError;
+      if (timetableError) throw timetableError;
       if (!timetableData) return null;
 
       const { data: entries, error: entriesError } = await supabase
@@ -192,7 +188,7 @@ export default function BatchDetail() {
     // Open the shortener link in new tab
     window.open('https://your-shortener-link.com', '_blank');
     
-    // Grant access after redirect (simulated - in real scenario this would be callback-based)
+    // Grant access after redirect
     setTimeout(() => {
       grantAccessMutation.mutate();
     }, 5000);
@@ -208,12 +204,10 @@ export default function BatchDetail() {
   // Handle video click - show popup if no access
   const handleVideoClick = (lecture: any) => {
     if (isAdmin || hasAdAccess) {
-      // Direct access for admin/premium
       return true;
     }
     
     if (accessMode === 'basic') {
-      // Check if lecture is basic
       if (lecture.is_basic) {
         return true;
       } else {
@@ -222,8 +216,6 @@ export default function BatchDetail() {
       }
     }
     
-    // Show popup
-    setPendingVideoLecture(lecture);
     setShowPremiumPopup(true);
     return false;
   };
@@ -243,14 +235,12 @@ export default function BatchDetail() {
         return false;
       }
     }
-    // In basic mode, only show basic lectures
     if (hasBasicAccess && !hasAccess && !lecture.is_basic) return false;
     return true;
   });
 
   const notes = lectures.filter(l => l.notes_url && (!selectedSubject || l.subject === selectedSubject));
   const dpps = lectures.filter(l => l.dpp_url && (!selectedSubject || l.subject === selectedSubject));
-  const specialMaterials = lectures.filter(l => l.special_module_url && (!selectedSubject || l.subject === selectedSubject));
 
   // Subject Selection Card Component
   const SubjectCard = ({ subject, count, icon }: { subject: string; count: number; icon?: React.ReactNode }) => (
@@ -287,7 +277,7 @@ export default function BatchDetail() {
   );
 
   // Get subject counts for each tab
-  const getSubjectCounts = (type: 'lectures' | 'notes' | 'dpp' | 'special') => {
+  const getSubjectCounts = (type: 'lectures' | 'notes' | 'dpp') => {
     return subjects.map(subject => {
       const subjectLectures = lectures.filter(l => l.subject === subject);
       let count = 0;
@@ -295,7 +285,6 @@ export default function BatchDetail() {
         case 'lectures': count = subjectLectures.length; break;
         case 'notes': count = subjectLectures.filter(l => l.notes_url).length; break;
         case 'dpp': count = subjectLectures.filter(l => l.dpp_url).length; break;
-        case 'special': count = subjectLectures.filter(l => l.special_module_url).length; break;
       }
       return { subject, count };
     }).filter(s => s.count > 0);
@@ -413,7 +402,6 @@ export default function BatchDetail() {
           <TabsList className="w-full overflow-x-auto flex justify-start gap-1 h-auto p-1">
             <TabsTrigger value="lectures" className="text-sm">Lectures</TabsTrigger>
             <TabsTrigger value="notes" className="text-sm">Notes & DPP</TabsTrigger>
-            <TabsTrigger value="special" className="text-sm">Special</TabsTrigger>
             <TabsTrigger value="timetable" className="text-sm">Timetable</TabsTrigger>
             {customSections.map(section => (
               <TabsTrigger key={section.id} value={`custom-${section.id}`} className="text-sm">
@@ -531,43 +519,6 @@ export default function BatchDetail() {
                       )}
                     </div>
                   </div>
-                </div>
-              </>
-            )}
-          </TabsContent>
-
-          {/* Special Materials Tab */}
-          <TabsContent value="special" className="space-y-4">
-            {!selectedSubject ? (
-              <>
-                <h3 className="font-semibold text-lg">Select Subject</h3>
-                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {getSubjectCounts('special').map(({ subject, count }) => (
-                    <SubjectCard key={subject} subject={subject} count={count} />
-                  ))}
-                </div>
-                {getSubjectCounts('special').length === 0 && (
-                  <p className="text-muted-foreground text-center py-8">No special materials available</p>
-                )}
-              </>
-            ) : (
-              <>
-                <BackToSubjects />
-                <h3 className="font-semibold text-lg mb-4">{selectedSubject} - Special Materials</h3>
-                <div className="space-y-2">
-                  {specialMaterials.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-8">No special materials available</p>
-                  ) : (
-                    specialMaterials.map(lecture => (
-                      <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
-                        <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
-                        <Button size="sm" variant="outline" disabled={!hasAccess}
-                          onClick={() => hasAccess && lecture.special_module_url && window.open(lecture.special_module_url, '_blank')}>
-                          <Download className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))
-                  )}
                 </div>
               </>
             )}
