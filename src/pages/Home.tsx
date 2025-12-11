@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Users, Award, Clock } from 'lucide-react';
+import { ArrowRight, BookOpen, Users, Award, Clock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import BatchCard from '@/components/cards/BatchCard';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,27 +41,54 @@ export default function Home() {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className="relative gradient-hero overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(234_89%_58%/0.1),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(38_92%_50%/0.1),transparent_50%)]" />
+      <section className="relative gradient-hero overflow-hidden min-h-[90vh] flex items-center">
+        {/* Animated background elements */}
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,hsl(234_89%_58%/0.15),transparent_50%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,hsl(38_92%_50%/0.15),transparent_50%)]" />
+          <div className="absolute top-20 left-[10%] w-72 h-72 bg-primary/10 rounded-full blur-3xl animate-float" />
+          <div className="absolute bottom-20 right-[10%] w-96 h-96 bg-accent/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
+        </div>
+        
+        {/* Floating shapes */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[20%] left-[15%] w-4 h-4 bg-primary/30 rounded-full animate-float" style={{ animationDelay: '0s' }} />
+          <div className="absolute top-[30%] right-[20%] w-6 h-6 bg-accent/30 rounded-full animate-float" style={{ animationDelay: '1s' }} />
+          <div className="absolute bottom-[25%] left-[25%] w-3 h-3 bg-primary/40 rounded-full animate-float" style={{ animationDelay: '2s' }} />
+          <div className="absolute top-[40%] right-[10%] w-5 h-5 bg-accent/40 rounded-full animate-float" style={{ animationDelay: '1.5s' }} />
+        </div>
         
         <div className="container mx-auto px-4 py-20 md:py-32 relative">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-fade-in">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-8 animate-bounce-in">
+              <Sparkles className="w-4 h-4" />
+              <span>Start your learning journey today</span>
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-bold mb-6 animate-slide-up">
               Learn Smart,{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent">
+              <span className="text-gradient relative">
                 Achieve More
+                <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 12" fill="none">
+                  <path d="M2 10C50 4 100 2 150 6C200 10 250 8 298 4" stroke="url(#gradient)" strokeWidth="4" strokeLinecap="round"/>
+                  <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="hsl(234 89% 58%)" />
+                      <stop offset="100%" stopColor="hsl(38 92% 50%)" />
+                    </linearGradient>
+                  </defs>
+                </svg>
               </span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground mb-8 animate-fade-in" style={{ animationDelay: '0.1s' }}>
+            <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto animate-slide-up" style={{ animationDelay: '0.1s' }}>
               Your complete learning platform for JEE, NEET, and Board exams. 
               Access live classes, notes, DPPs, and expert guidance all in one place.
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-fade-in" style={{ animationDelay: '0.2s' }}>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.2s' }}>
               <Link to="/batches">
-                <Button size="lg" className="gradient-primary text-lg px-8">
+                <Button size="lg" className="gradient-primary text-lg px-10 py-6 rounded-2xl shadow-glow hover:shadow-elevated transition-all duration-500 hover:scale-105 group">
                   Explore Batches
-                  <ArrowRight className="w-5 h-5 ml-2" />
+                  <ArrowRight className="w-5 h-5 ml-2 transition-transform duration-300 group-hover:translate-x-2" />
                 </Button>
               </Link>
             </div>
@@ -70,19 +97,19 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="py-12 bg-card border-y border-border">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+      <section className="py-16 bg-card/80 backdrop-blur-lg border-y border-border relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-accent/5" />
+        <div className="container mx-auto px-4 relative">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 stagger-children">
             {stats.map((stat, i) => (
               <div
                 key={stat.label}
-                className="text-center animate-fade-in"
-                style={{ animationDelay: `${i * 0.1}s` }}
+                className="text-center group"
               >
-                <div className="w-12 h-12 mx-auto mb-3 rounded-xl gradient-primary flex items-center justify-center">
-                  <stat.icon className="w-6 h-6 text-primary-foreground" />
+                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl gradient-primary flex items-center justify-center shadow-lg group-hover:shadow-glow group-hover:scale-110 transition-all duration-500">
+                  <stat.icon className="w-8 h-8 text-primary-foreground" />
                 </div>
-                <div className="text-2xl md:text-3xl font-bold text-foreground">{stat.value}</div>
+                <div className="text-3xl md:text-4xl font-bold text-foreground mb-1">{stat.value}</div>
                 <div className="text-sm text-muted-foreground">{stat.label}</div>
               </div>
             ))}
@@ -91,26 +118,26 @@ export default function Home() {
       </section>
 
       {/* Categories Section */}
-      <section className="py-16 md:py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Browse by Category</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+      <section className="py-20 md:py-28 relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-primary/5 to-transparent" />
+        <div className="container mx-auto px-4 relative">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl md:text-5xl font-bold mb-4 animate-slide-up">Browse by Category</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto text-lg animate-slide-up" style={{ animationDelay: '0.1s' }}>
               Choose your target exam and find the perfect batch for your preparation
             </p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-5 stagger-children">
             {categories.map((cat, i) => (
               <Link
                 key={cat.name}
                 to={`/batches?exam=${cat.name}`}
-                className="group animate-fade-in"
-                style={{ animationDelay: `${i * 0.05}s` }}
+                className="group"
               >
-                <div className={`${cat.color} rounded-xl p-6 text-center transition-all hover:scale-105 hover:shadow-elevated`}>
-                  <div className="text-3xl mb-2">{cat.icon}</div>
-                  <div className="font-semibold">{cat.name}</div>
+                <div className={`${cat.color} rounded-2xl p-6 text-center transition-all duration-500 hover-magnetic glass-card border border-border/50 hover:border-primary/30`}>
+                  <div className="text-4xl mb-3 transition-transform duration-500 group-hover:scale-125 group-hover:rotate-12">{cat.icon}</div>
+                  <div className="font-bold text-lg">{cat.name}</div>
                 </div>
               </Link>
             ))}
@@ -119,36 +146,31 @@ export default function Home() {
       </section>
 
       {/* Featured Batches Section */}
-      <section className="py-16 md:py-20 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-12">
+      <section className="py-20 md:py-28 bg-gradient-to-b from-secondary/30 via-secondary/50 to-secondary/30 relative">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,hsl(234_89%_58%/0.1),transparent_50%)]" />
+        <div className="container mx-auto px-4 relative">
+          <div className="flex items-center justify-between mb-16">
             <div>
-              <h2 className="text-3xl md:text-4xl font-bold mb-2">Featured Batches</h2>
-              <p className="text-muted-foreground">Top-rated courses by our expert faculty</p>
+              <h2 className="text-4xl md:text-5xl font-bold mb-3 animate-slide-up">Featured Batches</h2>
+              <p className="text-muted-foreground text-lg animate-slide-up" style={{ animationDelay: '0.1s' }}>Top-rated courses by our expert faculty</p>
             </div>
-            <Link to="/batches" className="hidden md:block">
-              <Button variant="outline">
+            <Link to="/batches" className="hidden md:block animate-slide-up" style={{ animationDelay: '0.2s' }}>
+              <Button variant="outline" className="rounded-xl hover:bg-primary hover:text-primary-foreground transition-all duration-300 group">
                 View All
-                <ArrowRight className="w-4 h-4 ml-2" />
+                <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
               </Button>
             </Link>
           </div>
           
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {batches.map((batch, i) => (
-              <div
-                key={batch.id}
-                className="animate-fade-in"
-                style={{ animationDelay: `${i * 0.1}s` }}
-              >
-                <BatchCard batch={batch} />
-              </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-children">
+            {batches.map((batch) => (
+              <BatchCard key={batch.id} batch={batch} />
             ))}
           </div>
 
-          <div className="mt-8 text-center md:hidden">
+          <div className="mt-10 text-center md:hidden">
             <Link to="/batches">
-              <Button variant="outline">
+              <Button variant="outline" className="rounded-xl">
                 View All Batches
                 <ArrowRight className="w-4 h-4 ml-2" />
               </Button>
@@ -158,38 +180,47 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-20">
+      <section className="py-24 relative overflow-hidden">
         <div className="container mx-auto px-4">
-          <div className="gradient-primary rounded-2xl p-8 md:p-12 text-center text-primary-foreground">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Ready to Start Learning?
-            </h2>
-            <p className="text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
-              Join thousands of students who are already preparing for their dream careers with {appName}.
-            </p>
-            <Link to="/batches">
-              <Button size="lg" variant="secondary" className="text-lg px-8">
-                Get Started Free
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Button>
-            </Link>
+          <div className="relative gradient-primary rounded-3xl p-10 md:p-16 text-center text-primary-foreground overflow-hidden shadow-glow">
+            {/* Animated background */}
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute -top-1/2 -left-1/2 w-full h-full bg-white/10 rounded-full blur-3xl animate-float" />
+              <div className="absolute -bottom-1/2 -right-1/2 w-full h-full bg-white/5 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
+            </div>
+            
+            <div className="relative">
+              <h2 className="text-4xl md:text-5xl font-bold mb-6 animate-slide-up">
+                Ready to Start Learning?
+              </h2>
+              <p className="text-primary-foreground/80 mb-10 max-w-2xl mx-auto text-lg animate-slide-up" style={{ animationDelay: '0.1s' }}>
+                Join thousands of students who are already preparing for their dream careers with {appName}.
+              </p>
+              <Link to="/batches">
+                <Button size="lg" variant="secondary" className="text-lg px-10 py-6 rounded-2xl hover:scale-105 transition-all duration-500 shadow-lg hover:shadow-xl animate-slide-up group" style={{ animationDelay: '0.2s' }}>
+                  Get Started Free
+                  <ArrowRight className="w-5 h-5 ml-2 transition-transform duration-300 group-hover:translate-x-2" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-border py-12">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-2.5 text-xl font-bold">
+      <footer className="bg-card/80 backdrop-blur-lg border-t border-border py-16 relative">
+        <div className="absolute inset-0 bg-gradient-to-t from-primary/5 to-transparent" />
+        <div className="container mx-auto px-4 relative">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-3 text-2xl font-bold group">
               {logoUrl ? (
-                <img src={logoUrl} alt={appName} className="w-8 h-8 rounded-lg object-cover" />
+                <img src={logoUrl} alt={appName} className="w-10 h-10 rounded-xl object-cover transition-transform duration-300 group-hover:scale-110" />
               ) : (
-                <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-                  <BookOpen className="w-5 h-5 text-primary-foreground" />
+                <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg transition-all duration-300 group-hover:shadow-glow group-hover:scale-110">
+                  <BookOpen className="w-6 h-6 text-primary-foreground" />
                 </div>
               )}
-              {appName}
+              <span className="transition-colors duration-300 group-hover:text-primary">{appName}</span>
             </div>
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} {appName}. All rights reserved.

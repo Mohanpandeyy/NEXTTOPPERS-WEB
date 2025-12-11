@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Calendar, Users, ArrowRight } from 'lucide-react';
+import { Calendar, Users, ArrowRight, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -21,7 +21,10 @@ export default function BatchCard({ batch, studentCount = 0, className }: BatchC
   return (
     <div
       className={cn(
-        'group bg-card rounded-xl overflow-hidden shadow-card hover:shadow-elevated transition-all duration-300 border border-border',
+        'group relative bg-card rounded-2xl overflow-hidden border border-border hover-magnetic',
+        'before:absolute before:inset-0 before:bg-gradient-to-br before:from-primary/5 before:to-accent/5 before:opacity-0 before:transition-opacity before:duration-500 hover:before:opacity-100',
+        'after:absolute after:inset-[-2px] after:rounded-2xl after:bg-gradient-to-r after:from-primary after:to-accent after:opacity-0 after:transition-opacity after:duration-500 after:-z-10 hover:after:opacity-100',
+        'shadow-card hover:shadow-glow transition-all duration-500',
         className
       )}
     >
@@ -29,29 +32,44 @@ export default function BatchCard({ batch, studentCount = 0, className }: BatchC
         <img
           src={batch.thumbnail_url || '/placeholder.svg'}
           alt={batch.name}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/60 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
+        
+        {/* Animated sparkle on hover */}
+        <div className="absolute top-3 left-3 opacity-0 group-hover:opacity-100 transition-all duration-500 transform -translate-y-2 group-hover:translate-y-0">
+          <div className="w-8 h-8 rounded-full bg-primary/20 backdrop-blur-sm flex items-center justify-center animate-pulse">
+            <Sparkles className="w-4 h-4 text-primary-foreground" />
+          </div>
+        </div>
+        
         <Badge
           className={cn(
-            'absolute top-3 right-3 capitalize',
+            'absolute top-3 right-3 capitalize backdrop-blur-sm transition-transform duration-300 group-hover:scale-110',
             statusColors[batch.status]
           )}
         >
           {batch.status}
         </Badge>
+        
+        {/* Floating exam badge */}
+        <div className="absolute bottom-3 left-3">
+          <Badge className="gradient-primary text-primary-foreground border-0 shadow-lg">
+            {batch.target_exam}
+          </Badge>
+        </div>
       </div>
       
-      <div className="p-5">
+      <div className="relative p-5 bg-card">
         <div className="flex flex-wrap gap-1.5 mb-3">
           {(batch.tags || []).slice(0, 3).map((tag) => (
-            <Badge key={tag} variant="secondary" className="text-xs">
+            <Badge key={tag} variant="secondary" className="text-xs transition-all duration-300 hover:bg-primary/10">
               {tag}
             </Badge>
           ))}
         </div>
         
-        <h3 className="font-semibold text-lg mb-2 line-clamp-1 group-hover:text-primary transition-colors">
+        <h3 className="font-bold text-lg mb-2 line-clamp-1 transition-colors duration-300 group-hover:text-primary">
           {batch.name}
         </h3>
         
@@ -61,19 +79,21 @@ export default function BatchCard({ batch, studentCount = 0, className }: BatchC
         
         <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
           <div className="flex items-center gap-1.5">
-            <Calendar className="w-4 h-4" />
+            <Calendar className="w-4 h-4 text-primary" />
             <span>{batch.start_date ? new Date(batch.start_date).toLocaleDateString() : 'TBD'}</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Users className="w-4 h-4" />
+            <Users className="w-4 h-4 text-accent" />
             <span>{studentCount} students</span>
           </div>
         </div>
         
         <Link to={`/batch/${batch.id}`}>
-          <Button className="w-full group/btn">
-            View Batch
-            <ArrowRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
+          <Button className="w-full group/btn gradient-primary border-0 shadow-lg hover:shadow-glow transition-all duration-300">
+            <span className="relative z-10 flex items-center justify-center w-full">
+              View Batch
+              <ArrowRight className="w-4 h-4 ml-2 transition-transform duration-300 group-hover/btn:translate-x-2" />
+            </span>
           </Button>
         </Link>
       </div>
