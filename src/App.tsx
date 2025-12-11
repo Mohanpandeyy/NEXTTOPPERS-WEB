@@ -13,12 +13,12 @@ import Auth from "@/pages/Auth";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import Dashboard from "@/pages/admin/Dashboard";
 import AdminBatches from "@/pages/admin/AdminBatches";
+import AdminSubjects from "@/pages/admin/AdminSubjects";
 import AdminLectures from "@/pages/admin/AdminLectures";
 import AdminTimetables from "@/pages/admin/AdminTimetables";
 import AdminUsersNew from "@/pages/admin/AdminUsersNew";
 import AdminMedia from "@/pages/admin/AdminMedia";
 import AdminSettings from "@/pages/admin/AdminSettings";
-import AdminBatchPasswords from "@/pages/admin/AdminBatchPasswords";
 import AdminCustomSections from "@/pages/admin/AdminCustomSections";
 import NotFound from "@/pages/NotFound";
 
@@ -43,10 +43,10 @@ const App = () => (
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="batches" element={<AdminBatches />} />
+              <Route path="subjects" element={<AdminSubjects />} />
               <Route path="lectures" element={<AdminLectures />} />
               <Route path="timetables" element={<AdminTimetables />} />
               <Route path="users" element={<AdminUsersNew />} />
-              <Route path="passwords" element={<AdminBatchPasswords />} />
               <Route path="sections" element={<AdminCustomSections />} />
               <Route path="media" element={<AdminMedia />} />
               <Route path="settings" element={<AdminSettings />} />
