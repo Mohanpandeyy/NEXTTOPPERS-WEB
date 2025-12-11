@@ -162,10 +162,12 @@ export default function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerPro
       >
         {videoType === 'youtube' && (
           <iframe
-            src={`https://www.youtube.com/embed/${getYouTubeId(videoUrl)}?autoplay=1&rel=0`}
+            src={`https://www.youtube.com/embed/${getYouTubeId(videoUrl)}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
             className="w-full h-full max-h-[80vh] aspect-video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+            title="Video Player"
           />
         )}
 

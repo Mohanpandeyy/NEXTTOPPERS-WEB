@@ -43,9 +43,7 @@ import { Badge } from '@/components/ui/badge';
 
 interface Batch { id: string; name: string; }
 interface CustomSection { id: string; batch_id: string; name: string; icon: string; sort_order: number; }
-interface CustomSectionItem { id: string; section_id: string; title: string; description: string | null; file_url: string | null; subject: string | null; sort_order: number; }
-
-const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Social Science'];
+interface CustomSectionItem { id: string; section_id: string; title: string; description: string | null; file_url: string | null; sort_order: number; }
 
 export default function AdminCustomSections() {
   const { toast } = useToast();
@@ -64,7 +62,7 @@ export default function AdminCustomSections() {
   // Item dialog
   const [isItemFormOpen, setIsItemFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<CustomSectionItem | null>(null);
-  const [itemForm, setItemForm] = useState({ title: '', description: '', file_url: '', subject: '' });
+  const [itemForm, setItemForm] = useState({ title: '', description: '', file_url: '' });
   
   // Delete dialogs
   const [deletingSection, setDeletingSection] = useState<CustomSection | null>(null);
@@ -168,8 +166,7 @@ export default function AdminCustomSections() {
         section_id: selectedSection.id, 
         title: itemForm.title, 
         description: itemForm.description || null, 
-        file_url: itemForm.file_url || null, 
-        subject: itemForm.subject || null 
+        file_url: itemForm.file_url || null
       };
       if (editingItem) {
         const { error } = await supabase.from('custom_section_items').update(data).eq('id', editingItem.id);
@@ -181,7 +178,7 @@ export default function AdminCustomSections() {
         toast({ title: 'Success', description: 'Item created' });
       }
       setIsItemFormOpen(false);
-      setItemForm({ title: '', description: '', file_url: '', subject: '' });
+      setItemForm({ title: '', description: '', file_url: '' });
       setEditingItem(null);
       fetchItems();
     } catch (error) {
@@ -253,7 +250,7 @@ export default function AdminCustomSections() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">{selectedSection.name} Items</CardTitle>
-            <Button size="sm" onClick={() => { setItemForm({ title: '', description: '', file_url: '', subject: '' }); setEditingItem(null); setIsItemFormOpen(true); }}>
+            <Button size="sm" onClick={() => { setItemForm({ title: '', description: '', file_url: '' }); setEditingItem(null); setIsItemFormOpen(true); }}>
               <Plus className="w-4 h-4 mr-2" />Add Item
             </Button>
           </CardHeader>
@@ -265,7 +262,7 @@ export default function AdminCustomSections() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Title</TableHead>
-                    <TableHead>Subject</TableHead>
+                    <TableHead>Description</TableHead>
                     <TableHead>File</TableHead>
                     <TableHead className="w-24">Actions</TableHead>
                   </TableRow>
@@ -274,11 +271,11 @@ export default function AdminCustomSections() {
                   {items.map(item => (
                     <TableRow key={item.id}>
                       <TableCell className="font-medium">{item.title}</TableCell>
-                      <TableCell>{item.subject && <Badge variant="outline">{item.subject}</Badge>}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">{item.description || '-'}</TableCell>
                       <TableCell>{item.file_url ? <a href={item.file_url} target="_blank" className="text-primary underline text-sm">View</a> : '-'}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(item); setItemForm({ title: item.title, description: item.description || '', file_url: item.file_url || '', subject: item.subject || '' }); setIsItemFormOpen(true); }}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(item); setItemForm({ title: item.title, description: item.description || '', file_url: item.file_url || '' }); setIsItemFormOpen(true); }}>
                             <Pencil className="w-4 h-4" />
                           </Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setDeletingItem(item)}>
@@ -322,22 +319,13 @@ export default function AdminCustomSections() {
               <Input value={itemForm.title} onChange={(e) => setItemForm(p => ({ ...p, title: e.target.value }))} placeholder="Item title" />
             </div>
             <div className="space-y-2">
-              <Label>Subject</Label>
-              <Select value={itemForm.subject} onValueChange={(v) => setItemForm(p => ({ ...p, subject: v }))}>
-                <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
-                <SelectContent>
-                  {SUBJECTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
               <Label>Description (optional)</Label>
               <Textarea value={itemForm.description} onChange={(e) => setItemForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description" />
             </div>
             <div className="space-y-2">
               <Label>File</Label>
               <div className="flex gap-2">
-                <Input value={itemForm.file_url} onChange={(e) => setItemForm(p => ({ ...p, file_url: e.target.value }))} placeholder="File URL" className="flex-1" />
+                <Input value={itemForm.file_url} onChange={(e) => setItemForm(p => ({ ...p, file_url: e.target.value }))} placeholder="File URL or paste link" className="flex-1" />
                 <Button variant="outline" className="relative" disabled={uploading}>
                   <Upload className="w-4 h-4" />
                   <input type="file" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={uploading} />
