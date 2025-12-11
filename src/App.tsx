@@ -8,7 +8,8 @@ import Navbar from "@/components/layout/Navbar";
 import Home from "@/pages/Home";
 import Batches from "@/pages/Batches";
 import BatchDetail from "@/pages/BatchDetail";
-import MyClasses from "@/pages/MyClasses";
+import TodayLive from "@/pages/TodayLive";
+import Notifications from "@/pages/Notifications";
 import Auth from "@/pages/Auth";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import Dashboard from "@/pages/admin/Dashboard";
@@ -20,6 +21,7 @@ import AdminUsersNew from "@/pages/admin/AdminUsersNew";
 import AdminMedia from "@/pages/admin/AdminMedia";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminCustomSections from "@/pages/admin/AdminCustomSections";
+import AdminLiveClasses from "@/pages/admin/AdminLiveClasses";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,7 +38,8 @@ const App = () => (
             <Route path="/" element={<><Navbar /><Home /></>} />
             <Route path="/batches" element={<><Navbar /><Batches /></>} />
             <Route path="/batch/:id" element={<><Navbar /><BatchDetail /></>} />
-            <Route path="/my-classes" element={<><Navbar /><MyClasses /></>} />
+            <Route path="/today-live" element={<><Navbar /><TodayLive /></>} />
+            <Route path="/notifications" element={<><Navbar /><Notifications /></>} />
             <Route path="/auth" element={<Auth />} />
             
             {/* Admin routes */}
@@ -45,6 +48,7 @@ const App = () => (
               <Route path="batches" element={<AdminBatches />} />
               <Route path="subjects" element={<AdminSubjects />} />
               <Route path="lectures" element={<AdminLectures />} />
+              <Route path="live" element={<AdminLiveClasses />} />
               <Route path="timetables" element={<AdminTimetables />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="sections" element={<AdminCustomSections />} />

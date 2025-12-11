@@ -153,7 +153,6 @@ export type Database = {
           id: string
           section_id: string
           sort_order: number | null
-          subject: string | null
           title: string
         }
         Insert: {
@@ -163,7 +162,6 @@ export type Database = {
           id?: string
           section_id: string
           sort_order?: number | null
-          subject?: string | null
           title: string
         }
         Update: {
@@ -173,7 +171,6 @@ export type Database = {
           id?: string
           section_id?: string
           sort_order?: number | null
-          subject?: string | null
           title?: string
         }
         Relationships: [
@@ -337,6 +334,62 @@ export type Database = {
           },
         ]
       }
+      live_classes: {
+        Row: {
+          batch_id: string
+          created_at: string
+          description: string | null
+          end_time: string | null
+          id: string
+          live_url: string
+          scheduled_time: string
+          status: string
+          subject: string | null
+          teacher_name: string | null
+          thumbnail_url: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          live_url: string
+          scheduled_time: string
+          status?: string
+          subject?: string | null
+          teacher_name?: string | null
+          thumbnail_url?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          description?: string | null
+          end_time?: string | null
+          id?: string
+          live_url?: string
+          scheduled_time?: string
+          status?: string
+          subject?: string | null
+          teacher_name?: string | null
+          thumbnail_url?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_classes_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media: {
         Row: {
           created_at: string
@@ -363,6 +416,67 @@ export type Database = {
           url?: string
         }
         Relationships: []
+      }
+      notifications: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          lecture_id: string | null
+          live_class_id: string | null
+          message: string
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          lecture_id?: string | null
+          live_class_id?: string | null
+          message: string
+          title: string
+          type?: string
+          user_id?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          lecture_id?: string | null
+          live_class_id?: string | null
+          message?: string
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_lecture_id_fkey"
+            columns: ["lecture_id"]
+            isOneToOne: false
+            referencedRelation: "lectures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_live_class_id_fkey"
+            columns: ["live_class_id"]
+            isOneToOne: false
+            referencedRelation: "live_classes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
