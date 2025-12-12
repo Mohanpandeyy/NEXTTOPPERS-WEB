@@ -22,6 +22,7 @@ import AdminMedia from "@/pages/admin/AdminMedia";
 import AdminSettings from "@/pages/admin/AdminSettings";
 import AdminCustomSections from "@/pages/admin/AdminCustomSections";
 import AdminLiveClasses from "@/pages/admin/AdminLiveClasses";
+import AdminNotifications from "@/pages/admin/AdminNotifications";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ const App = () => (
               <Route path="subjects" element={<AdminSubjects />} />
               <Route path="lectures" element={<AdminLectures />} />
               <Route path="live-classes" element={<AdminLiveClasses />} />
+              <Route path="notifications" element={<AdminNotifications />} />
               <Route path="timetables" element={<AdminTimetables />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="sections" element={<AdminCustomSections />} />
