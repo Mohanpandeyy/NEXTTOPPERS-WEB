@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BookOpen, GraduationCap, Menu, X, LogIn, LogOut } from 'lucide-react';
+import { Home, BookOpen, Radio, Bell, Menu, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -9,7 +9,8 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 const navLinks = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/batches', label: 'Batches', icon: BookOpen },
-  { href: '/my-classes', label: 'My Classes', icon: GraduationCap },
+  { href: '/today-live', label: 'Today Live', icon: Radio },
+  { href: '/notifications', label: 'Notifications', icon: Bell },
 ];
 
 export default function Navbar() {
@@ -36,8 +37,8 @@ export default function Navbar() {
             {logoUrl ? (
               <img src={logoUrl} alt={appName} className="w-10 h-10 rounded-xl object-cover transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3" />
             ) : (
-              <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center shadow-lg transition-all duration-500 group-hover:shadow-glow group-hover:scale-110 group-hover:rotate-3">
-                <GraduationCap className="w-6 h-6 text-primary-foreground" />
+              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center shadow-lg transition-all duration-500 group-hover:shadow-glow group-hover:scale-110 group-hover:rotate-3">
+                <Radio className="w-6 h-6 text-primary-foreground" />
               </div>
             )}
             <span className="hidden sm:inline font-bold text-lg">{appName}</span>

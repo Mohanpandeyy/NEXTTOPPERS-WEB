@@ -180,18 +180,18 @@ export default function BatchDetail() {
     },
   });
 
-  // Handle premium access - open shortener link
+  // Handle premium access - open Adsterra shortener link
   const handleGetPremium = () => {
     setShowPremiumPopup(false);
     setShowingAd(true);
     
-    // Open the shortener link in new tab
-    window.open('https://your-shortener-link.com', '_blank');
+    // Open the Adsterra shortener link
+    window.open('https://www.arow.link/4fc49eaa24e92c9388eb75ecf51f34e7e4307a55', '_blank');
     
-    // Grant access after redirect
+    // Grant 24-hour access after user completes verification
     setTimeout(() => {
       grantAccessMutation.mutate();
-    }, 5000);
+    }, 8000);
   };
 
   // Handle basic access
