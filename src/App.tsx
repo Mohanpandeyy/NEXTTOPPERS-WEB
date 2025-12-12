@@ -48,7 +48,7 @@ const App = () => (
               <Route path="batches" element={<AdminBatches />} />
               <Route path="subjects" element={<AdminSubjects />} />
               <Route path="lectures" element={<AdminLectures />} />
-              <Route path="live" element={<AdminLiveClasses />} />
+              <Route path="live-classes" element={<AdminLiveClasses />} />
               <Route path="timetables" element={<AdminTimetables />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="sections" element={<AdminCustomSections />} />
