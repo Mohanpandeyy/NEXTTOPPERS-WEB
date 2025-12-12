@@ -9,6 +9,7 @@ const sidebarLinks = [
   { href: '/admin/subjects', label: 'Subjects', icon: Layers },
   { href: '/admin/lectures', label: 'Lectures', icon: Video },
   { href: '/admin/live-classes', label: 'Live Classes', icon: Radio },
+  { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/timetables', label: 'Timetables', icon: Calendar },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/sections', label: 'Custom Sections', icon: FolderPlus },

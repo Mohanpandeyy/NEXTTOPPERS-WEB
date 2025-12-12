@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play, Timer } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -20,6 +20,15 @@ const statusColors = {
   completed: 'bg-muted text-muted-foreground border-muted',
 };
 
+// Helper function to format countdown time
+const formatCountdown = (ms: number) => {
+  if (ms <= 0) return null;
+  const hours = Math.floor(ms / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  const seconds = Math.floor((ms % (1000 * 60)) / 1000);
+  return `${hours}h ${minutes}m ${seconds}s`;
+};
+
 export default function BatchDetail() {
   const { id } = useParams<{ id: string }>();
   const { user, isAdmin } = useSupabaseAuth();
@@ -31,6 +40,7 @@ export default function BatchDetail() {
   const [showingAd, setShowingAd] = useState(false);
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [accessMode, setAccessMode] = useState<'premium' | 'basic' | null>(null);
+  const [countdown, setCountdown] = useState<string | null>(null);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -134,12 +144,12 @@ export default function BatchDetail() {
     enabled: !!id && !!user,
   });
 
-  // Check ad-based access (24 hours)
-  const { data: hasAdAccess = false, refetch: refetchAdAccess } = useQuery({
+  // Check ad-based access (24 hours) and get expiry time
+  const { data: adAccessData, refetch: refetchAdAccess } = useQuery({
     queryKey: ['ad-access', user?.id],
     queryFn: async () => {
-      if (!user) return false;
-      if (isAdmin) return true;
+      if (!user) return null;
+      if (isAdmin) return { hasAccess: true, expiresAt: null };
       
       const { data, error } = await supabase
         .from('ad_access')
@@ -150,10 +160,40 @@ export default function BatchDetail() {
         .limit(1)
         .maybeSingle();
       
-      return !!data && !error;
+      if (data && !error) {
+        return { hasAccess: true, expiresAt: data.expires_at };
+      }
+      return { hasAccess: false, expiresAt: null };
     },
     enabled: !!user,
   });
+
+  const hasAdAccess = adAccessData?.hasAccess || false;
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!adAccessData?.expiresAt) {
+      setCountdown(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const expiresAt = new Date(adAccessData.expiresAt).getTime();
+      const now = Date.now();
+      const remaining = expiresAt - now;
+      
+      if (remaining <= 0) {
+        setCountdown(null);
+        refetchAdAccess();
+      } else {
+        setCountdown(formatCountdown(remaining));
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 1000);
+    return () => clearInterval(interval);
+  }, [adAccessData?.expiresAt, refetchAdAccess]);
 
   // Grant access after ad
   const grantAccessMutation = useMutation({
@@ -342,7 +382,13 @@ export default function BatchDetail() {
               {accessMode === 'basic' && (
                 <Badge variant="outline" className="text-xs bg-secondary/50">Basic Mode</Badge>
               )}
-              {hasAdAccess && (
+              {hasAdAccess && countdown && (
+                <Badge className="text-xs bg-primary flex items-center gap-1">
+                  <Timer className="w-3 h-3" />
+                  Premium: {countdown}
+                </Badge>
+              )}
+              {hasAdAccess && !countdown && !isAdmin && (
                 <Badge className="text-xs bg-primary">Premium Active</Badge>
               )}
             </div>
