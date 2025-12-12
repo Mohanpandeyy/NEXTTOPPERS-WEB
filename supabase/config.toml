@@ -8,3 +8,12 @@ verify_jwt = false
 
 [functions.check-access]
 verify_jwt = false
+
+[functions.start-verification]
+verify_jwt = true
+
+[functions.arolinks-callback]
+verify_jwt = false
+
+[functions.confirm-code]
+verify_jwt = false

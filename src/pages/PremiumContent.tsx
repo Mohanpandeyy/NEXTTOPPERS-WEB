@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useVerificationAccess } from '@/hooks/useVerificationAccess';
-import { UnlockAccessButton } from '@/components/UnlockAccessButton';
+import { VerificationFlow } from '@/components/VerificationFlow';
 import { Lock, Star, Clock, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -31,26 +31,21 @@ export default function PremiumContent() {
     );
   }
 
-  // Protected content - only shown if user has access
   if (!accessStatus.hasAccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="max-w-md w-full text-center space-y-6">
-          <div className="mx-auto w-20 h-20 rounded-full bg-yellow-500/10 flex items-center justify-center">
-            <Lock className="h-10 w-10 text-yellow-500" />
-          </div>
-
-          <div className="space-y-2">
+        <div className="max-w-md w-full space-y-6">
+          <div className="text-center space-y-2">
+            <div className="mx-auto w-20 h-20 rounded-full bg-yellow-500/10 flex items-center justify-center">
+              <Lock className="h-10 w-10 text-yellow-500" />
+            </div>
             <h1 className="text-2xl font-bold text-foreground">Premium Content</h1>
             <p className="text-muted-foreground">
-              This content requires premium access. Complete verification to unlock 36 hours of access.
+              Complete verification to unlock 36 hours of premium access.
             </p>
           </div>
 
-          <UnlockAccessButton 
-            onAccessGranted={() => checkAccess()} 
-            className="w-full"
-          />
+          <VerificationFlow onAccessGranted={() => checkAccess()} />
 
           <Button 
             onClick={() => navigate('/')} 
@@ -64,11 +59,9 @@ export default function PremiumContent() {
     );
   }
 
-  // User has premium access - show content
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto p-6 space-y-8">
-        {/* Access status banner */}
         <div className="bg-gradient-to-r from-primary/10 to-purple-500/10 rounded-xl p-6 border border-primary/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -87,7 +80,6 @@ export default function PremiumContent() {
           </div>
         </div>
 
-        {/* Premium content */}
         <div className="space-y-6">
           <h1 className="text-3xl font-bold text-foreground">Premium Content</h1>
           

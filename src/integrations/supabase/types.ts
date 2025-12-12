@@ -656,6 +656,8 @@ export type Database = {
       }
       verification_tokens: {
         Row: {
+          code: string | null
+          code_expires_at: string | null
           created_at: string
           expires_at: string
           id: string
@@ -664,6 +666,8 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          code?: string | null
+          code_expires_at?: string | null
           created_at?: string
           expires_at?: string
           id?: string
@@ -672,6 +676,8 @@ export type Database = {
           user_id: string
         }
         Update: {
+          code?: string | null
+          code_expires_at?: string | null
           created_at?: string
           expires_at?: string
           id?: string
