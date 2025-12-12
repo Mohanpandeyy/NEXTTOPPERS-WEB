@@ -1,1 +1,10 @@
 project_id = "erxesybkqdckxlzparjx"
+
+[functions.request-access]
+verify_jwt = false
+
+[functions.verify-access]
+verify_jwt = false
+
+[functions.check-access]
+verify_jwt = false

@@ -24,6 +24,8 @@ import AdminCustomSections from "@/pages/admin/AdminCustomSections";
 import AdminLiveClasses from "@/pages/admin/AdminLiveClasses";
 import AdminNotifications from "@/pages/admin/AdminNotifications";
 import NotFound from "@/pages/NotFound";
+import VerifySuccess from "@/pages/VerifySuccess";
+import PremiumContent from "@/pages/PremiumContent";
 
 const queryClient = new QueryClient();
 
@@ -42,6 +44,8 @@ const App = () => (
             <Route path="/today-live" element={<><Navbar /><TodayLive /></>} />
             <Route path="/notifications" element={<><Navbar /><Notifications /></>} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/verify-success" element={<VerifySuccess />} />
+            <Route path="/premium-content" element={<><Navbar /><PremiumContent /></>} />
             
             {/* Admin routes */}
             <Route path="/admin" element={<AdminLayout />}>
