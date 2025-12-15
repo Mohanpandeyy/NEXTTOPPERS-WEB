@@ -267,12 +267,26 @@ export default function AdminLectures() {
         if (error) throw error;
         toast({ title: 'Success', description: 'Lecture updated successfully' });
       } else {
-        const { error } = await supabase
+        const { data: newLecture, error } = await supabase
           .from('lectures')
-          .insert([lectureData]);
+          .insert([lectureData])
+          .select()
+          .single();
         
         if (error) throw error;
-        toast({ title: 'Success', description: 'Lecture created successfully' });
+        
+        // Send notification to all users about new lecture
+        if (newLecture) {
+          await supabase.from('notifications').insert({
+            title: 'New Lecture Added',
+            message: `New lecture "${lectureData.title}" has been added to ${getBatchName(lectureData.batch_id)}`,
+            type: 'lecture',
+            batch_id: lectureData.batch_id,
+            lecture_id: newLecture.id,
+          });
+        }
+        
+        toast({ title: 'Success', description: 'Lecture created and notification sent!' });
       }
 
       setIsFormOpen(false);
