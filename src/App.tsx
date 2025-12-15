@@ -15,6 +15,7 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import Dashboard from "@/pages/admin/Dashboard";
 import AdminBatches from "@/pages/admin/AdminBatches";
 import AdminSubjects from "@/pages/admin/AdminSubjects";
+import AdminTeachers from "@/pages/admin/AdminTeachers";
 import AdminLectures from "@/pages/admin/AdminLectures";
 import AdminTimetables from "@/pages/admin/AdminTimetables";
 import AdminUsersNew from "@/pages/admin/AdminUsersNew";
@@ -25,6 +26,7 @@ import AdminLiveClasses from "@/pages/admin/AdminLiveClasses";
 import AdminNotifications from "@/pages/admin/AdminNotifications";
 import AdminVerifications from "@/pages/admin/AdminVerifications";
 import AdminFeedback from "@/pages/admin/AdminFeedback";
+import AdminAccessGrant from "@/pages/admin/AdminAccessGrant";
 import NotFound from "@/pages/NotFound";
 import VerifySuccess from "@/pages/VerifySuccess";
 import PremiumContent from "@/pages/PremiumContent";
@@ -54,12 +56,14 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="batches" element={<AdminBatches />} />
               <Route path="subjects" element={<AdminSubjects />} />
+              <Route path="teachers" element={<AdminTeachers />} />
               <Route path="lectures" element={<AdminLectures />} />
               <Route path="live-classes" element={<AdminLiveClasses />} />
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="timetables" element={<AdminTimetables />} />
               <Route path="verifications" element={<AdminVerifications />} />
               <Route path="feedback" element={<AdminFeedback />} />
+              <Route path="access" element={<AdminAccessGrant />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="sections" element={<AdminCustomSections />} />
               <Route path="media" element={<AdminMedia />} />

@@ -70,11 +70,18 @@ interface Subject {
   name: string;
 }
 
+interface Teacher {
+  id: string;
+  name: string;
+  subject: string | null;
+}
+
 export default function AdminLectures() {
   const { toast } = useToast();
   const [lectures, setLectures] = useState<Lecture[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterBatch, setFilterBatch] = useState<string>('all');
@@ -115,19 +122,22 @@ export default function AdminLectures() {
 
   const fetchData = async () => {
     try {
-      const [lecturesRes, batchesRes, subjectsRes] = await Promise.all([
+      const [lecturesRes, batchesRes, subjectsRes, teachersRes] = await Promise.all([
         supabase.from('lectures').select('*').order('created_at', { ascending: false }),
         supabase.from('batches').select('id, name').order('name'),
         supabase.from('subjects').select('id, name').order('sort_order'),
+        supabase.from('teachers').select('id, name, subject').order('name'),
       ]);
       
       if (lecturesRes.error) throw lecturesRes.error;
       if (batchesRes.error) throw batchesRes.error;
       if (subjectsRes.error) throw subjectsRes.error;
+      if (teachersRes.error) throw teachersRes.error;
       
       setLectures(lecturesRes.data || []);
       setBatches(batchesRes.data || []);
       setSubjects(subjectsRes.data || []);
+      setTeachers(teachersRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({ title: 'Error', description: 'Failed to load data', variant: 'destructive' });
@@ -556,12 +566,17 @@ export default function AdminLectures() {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Teacher Name *</Label>
-                <Input
-                  value={formData.teacher_name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, teacher_name: e.target.value }))}
-                  placeholder="Dr. John Doe"
-                />
+                <Label>Teacher *</Label>
+                <Select value={formData.teacher_name} onValueChange={(v) => setFormData(prev => ({ ...prev, teacher_name: v }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select teacher" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {teachers.map(teacher => (
+                      <SelectItem key={teacher.id} value={teacher.name}>{teacher.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>Date & Time</Label>
