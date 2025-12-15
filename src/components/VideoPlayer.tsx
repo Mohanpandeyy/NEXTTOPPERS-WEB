@@ -1,8 +1,14 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward } from 'lucide-react';
+import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward, PictureInPicture, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 interface VideoPlayerProps {
   videoUrl: string;
@@ -32,6 +38,8 @@ const getVimeoId = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
+const SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
 export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }: VideoPlayerProps) {
   const videoType = getVideoType(videoUrl);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -44,6 +52,8 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
   const [volume, setVolume] = useState(1);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [isPiP, setIsPiP] = useState(false);
   
   // Hide controls after inactivity
   useEffect(() => {
@@ -98,6 +108,27 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
     videoRef.current.currentTime += seconds;
   };
 
+  const changeSpeed = (speed: number) => {
+    if (!videoRef.current) return;
+    videoRef.current.playbackRate = speed;
+    setPlaybackSpeed(speed);
+  };
+
+  const togglePiP = async () => {
+    if (!videoRef.current) return;
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+        setIsPiP(false);
+      } else if (document.pictureInPictureEnabled) {
+        await videoRef.current.requestPictureInPicture();
+        setIsPiP(true);
+      }
+    } catch (error) {
+      console.error('PiP error:', error);
+    }
+  };
+
   const toggleFullscreen = async () => {
     if (!containerRef.current) return;
     if (!isFullscreen) {
@@ -113,6 +144,13 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
     const secs = Math.floor(time % 60);
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
+
+  // Listen for PiP exit
+  useEffect(() => {
+    const handlePiPExit = () => setIsPiP(false);
+    videoRef.current?.addEventListener('leavepictureinpicture', handlePiPExit);
+    return () => videoRef.current?.removeEventListener('leavepictureinpicture', handlePiPExit);
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -135,14 +173,17 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
         case 'f':
           toggleFullscreen();
           break;
+        case 'p':
+          if (videoType === 'direct') togglePiP();
+          break;
         case 'Escape':
-          onClose();
+          if (!isFullscreen) onClose();
           break;
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying, isMuted]);
+  }, [isPlaying, isMuted, isFullscreen]);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
@@ -255,9 +296,46 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
                   </div>
                 </div>
 
-                <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:bg-white/20">
-                  {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
-                </Button>
+                <div className="flex items-center gap-2">
+                  {/* Speed selector */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 text-xs px-2">
+                        {playbackSpeed}x
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-black/90 border-white/20">
+                      {SPEED_OPTIONS.map((speed) => (
+                        <DropdownMenuItem
+                          key={speed}
+                          onClick={() => changeSpeed(speed)}
+                          className={cn(
+                            "text-white hover:bg-white/20 cursor-pointer",
+                            playbackSpeed === speed && "bg-primary/50"
+                          )}
+                        >
+                          {speed}x
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* PiP button */}
+                  {document.pictureInPictureEnabled && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      onClick={togglePiP} 
+                      className={cn("text-white hover:bg-white/20", isPiP && "bg-primary/50")}
+                    >
+                      <PictureInPicture className="w-5 h-5" />
+                    </Button>
+                  )}
+
+                  <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:bg-white/20">
+                    {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                  </Button>
+                </div>
               </div>
             </div>
           </>

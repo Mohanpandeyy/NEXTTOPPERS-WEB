@@ -1,15 +1,31 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 serve(async (req) => {
+  // Handle CORS preflight
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
     const url = new URL(req.url);
     const token = url.searchParams.get('token');
 
+    console.log('Received callback with token:', token);
+
     if (!token) {
+      console.error('Missing token in callback');
       return new Response(getErrorHTML('Missing verification token'), {
         status: 400,
-        headers: { 'Content-Type': 'text/html' },
+        headers: { 
+          'Content-Type': 'text/html; charset=utf-8',
+          ...corsHeaders 
+        },
       });
     }
 
@@ -30,7 +46,10 @@ serve(async (req) => {
       console.error('Token validation error:', tokenError);
       return new Response(getErrorHTML('Invalid or expired token'), {
         status: 400,
-        headers: { 'Content-Type': 'text/html' },
+        headers: { 
+          'Content-Type': 'text/html; charset=utf-8',
+          ...corsHeaders 
+        },
       });
     }
 
@@ -38,12 +57,15 @@ serve(async (req) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min expiry
 
-    // Update token with code
+    console.log('Generated code:', code, 'for token:', tokenData.id);
+
+    // Update token with code and status
     const { error: updateError } = await supabase
       .from('verification_tokens')
       .update({
         code: code,
         code_expires_at: codeExpiresAt,
+        status: 'code_generated'
       })
       .eq('id', tokenData.id);
 
@@ -51,21 +73,32 @@ serve(async (req) => {
       console.error('Code update error:', updateError);
       return new Response(getErrorHTML('Failed to generate code'), {
         status: 500,
-        headers: { 'Content-Type': 'text/html' },
+        headers: { 
+          'Content-Type': 'text/html; charset=utf-8',
+          ...corsHeaders 
+        },
       });
     }
+
+    console.log('Successfully updated token with code');
 
     // Return success page with code
     return new Response(getSuccessHTML(code), {
       status: 200,
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 
+        'Content-Type': 'text/html; charset=utf-8',
+        ...corsHeaders 
+      },
     });
 
   } catch (error) {
     console.error('Callback error:', error);
     return new Response(getErrorHTML('Internal server error'), {
       status: 500,
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 
+        'Content-Type': 'text/html; charset=utf-8',
+        ...corsHeaders 
+      },
     });
   }
 });
