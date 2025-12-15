@@ -1,16 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, BookOpen, Radio, Bell, Menu, X, LogIn, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useNotifications } from '@/hooks/useNotifications';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/batches', label: 'Batches', icon: BookOpen },
   { href: '/today-live', label: 'Today Live', icon: Radio },
-  { href: '/notifications', label: 'Notifications', icon: Bell },
+  { href: '/notifications', label: 'Notifications', icon: Bell, showBadge: true },
 ];
 
 export default function Navbar() {
@@ -18,11 +19,33 @@ export default function Navbar() {
   const navigate = useNavigate();
   const { user, isAdmin, signOut } = useSupabaseAuth();
   const { appName, logoUrl } = useAppSettings();
+  const { unreadCount, requestPermission } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Request notification permission when user logs in
+  useEffect(() => {
+    if (user) {
+      requestPermission();
+    }
+  }, [user, requestPermission]);
 
   const handleLogout = async () => {
     await signOut();
     navigate('/');
+  };
+
+  const NotificationBadge = ({ count, className }: { count: number; className?: string }) => {
+    if (count === 0) return null;
+    return (
+      <span className={cn(
+        "absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center",
+        "bg-red-500 text-white text-[10px] font-bold rounded-full px-1",
+        "animate-pulse shadow-lg",
+        className
+      )}>
+        {count > 99 ? '99+' : count}
+      </span>
+    );
   };
 
   return (
@@ -54,13 +77,18 @@ export default function Navbar() {
                   key={link.href}
                   to={link.href}
                   className={cn(
-                    'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300',
+                    'relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300',
                     isActive
                       ? 'bg-primary text-primary-foreground shadow-lg'
                       : 'text-muted-foreground hover:text-foreground hover:bg-card'
                   )}
                 >
-                  <Icon className="w-4 h-4" />
+                  <div className="relative">
+                    <Icon className="w-4 h-4" />
+                    {link.showBadge && user && (
+                      <NotificationBadge count={unreadCount} className="-top-2 -right-2" />
+                    )}
+                  </div>
                   {link.label}
                 </Link>
               );
@@ -93,17 +121,27 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2.5 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-300"
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          >
-            {isMobileMenuOpen ? (
-              <X className="w-6 h-6" />
-            ) : (
-              <Menu className="w-6 h-6" />
+          {/* Mobile menu button with notification badge */}
+          <div className="md:hidden flex items-center gap-2">
+            {/* Mobile notification indicator */}
+            {user && unreadCount > 0 && (
+              <Link to="/notifications" className="relative p-2.5 rounded-xl bg-secondary/50">
+                <Bell className="w-5 h-5" />
+                <NotificationBadge count={unreadCount} />
+              </Link>
             )}
-          </button>
+            
+            <button
+              className="p-2.5 rounded-xl bg-secondary/50 hover:bg-secondary transition-all duration-300"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            >
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Mobile Navigation */}
@@ -119,15 +157,22 @@ export default function Navbar() {
                     to={link.href}
                     onClick={() => setIsMobileMenuOpen(false)}
                     className={cn(
-                      'flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-300',
+                      'flex items-center justify-between px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-300',
                       isActive
                         ? 'bg-primary text-primary-foreground shadow-lg'
                         : 'text-muted-foreground hover:text-foreground hover:bg-card'
                     )}
                     style={{ animationDelay: `${i * 0.05}s` }}
                   >
-                    <Icon className="w-5 h-5" />
-                    {link.label}
+                    <div className="flex items-center gap-3">
+                      <Icon className="w-5 h-5" />
+                      {link.label}
+                    </div>
+                    {link.showBadge && user && unreadCount > 0 && (
+                      <span className="min-w-[20px] h-[20px] flex items-center justify-center bg-red-500 text-white text-xs font-bold rounded-full px-1.5">
+                        {unreadCount > 99 ? '99+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
                 );
               })}
