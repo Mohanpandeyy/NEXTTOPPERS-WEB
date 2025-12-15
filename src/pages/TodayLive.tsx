@@ -236,6 +236,7 @@ export default function TodayLive() {
         <VideoPlayer
           videoUrl={currentLive.live_url}
           title={currentLive.title}
+          isLive={true}
           onClose={() => {
             setShowPlayer(false);
             setCurrentLive(null);
