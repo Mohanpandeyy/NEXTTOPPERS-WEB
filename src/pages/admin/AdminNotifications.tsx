@@ -277,12 +277,15 @@ export default function AdminNotifications() {
 
       {/* Send Notification Dialog */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg" aria-describedby="notification-dialog-desc">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Megaphone className="w-5 h-5" />
               Send Notification
             </DialogTitle>
+            <p id="notification-dialog-desc" className="text-sm text-muted-foreground">
+              Send a notification to all users or a specific batch
+            </p>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
