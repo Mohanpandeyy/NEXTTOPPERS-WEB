@@ -620,6 +620,36 @@ export type Database = {
         }
         Relationships: []
       }
+      teachers: {
+        Row: {
+          bio: string | null
+          created_at: string
+          id: string
+          name: string
+          photo_url: string | null
+          sort_order: number | null
+          subject: string | null
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          photo_url?: string | null
+          sort_order?: number | null
+          subject?: string | null
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          photo_url?: string | null
+          sort_order?: number | null
+          subject?: string | null
+        }
+        Relationships: []
+      }
       timetable_entries: {
         Row: {
           created_at: string

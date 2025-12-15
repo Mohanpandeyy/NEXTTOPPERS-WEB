@@ -1,5 +1,5 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap, FolderPlus, Layers, Radio, Bell, Key, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap, FolderPlus, Layers, Radio, Bell, Key, MessageSquare, UserCheck, Shield } from 'lucide-react';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { cn } from '@/lib/utils';
 
@@ -7,11 +7,13 @@ const sidebarLinks = [
   { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/admin/batches', label: 'Batches', icon: BookOpen },
   { href: '/admin/subjects', label: 'Subjects', icon: Layers },
+  { href: '/admin/teachers', label: 'Teachers', icon: UserCheck },
   { href: '/admin/lectures', label: 'Lectures', icon: Video },
   { href: '/admin/live-classes', label: 'Live Classes', icon: Radio },
   { href: '/admin/notifications', label: 'Notifications', icon: Bell },
   { href: '/admin/timetables', label: 'Timetables', icon: Calendar },
   { href: '/admin/feedback', label: 'Feedback', icon: MessageSquare },
+  { href: '/admin/access', label: 'Access Grant', icon: Shield },
   { href: '/admin/verifications', label: 'Verifications', icon: Key },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/sections', label: 'Custom Sections', icon: FolderPlus },

@@ -447,7 +447,8 @@ export default function BatchDetail() {
         <Tabs defaultValue="lectures" className="space-y-6" onValueChange={() => setSelectedSubject(null)}>
           <TabsList className="w-full overflow-x-auto flex justify-start gap-1 h-auto p-1">
             <TabsTrigger value="lectures" className="text-sm">Lectures</TabsTrigger>
-            <TabsTrigger value="notes" className="text-sm">Notes & DPP</TabsTrigger>
+            <TabsTrigger value="notes" className="text-sm">Notes</TabsTrigger>
+            <TabsTrigger value="dpp" className="text-sm">DPP</TabsTrigger>
             <TabsTrigger value="timetable" className="text-sm">Timetable</TabsTrigger>
             {customSections.map(section => (
               <TabsTrigger key={section.id} value={`custom-${section.id}`} className="text-sm">
@@ -501,7 +502,7 @@ export default function BatchDetail() {
             )}
           </TabsContent>
 
-          {/* Notes & DPP Tab */}
+          {/* Notes Tab */}
           <TabsContent value="notes" className="space-y-4">
             {!selectedSubject ? (
               <>
@@ -509,62 +510,93 @@ export default function BatchDetail() {
                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {subjects.map(subject => {
                     const notesCount = lectures.filter(l => l.subject === subject && l.notes_url).length;
-                    const dppCount = lectures.filter(l => l.subject === subject && l.dpp_url).length;
-                    const total = notesCount + dppCount;
-                    if (total === 0) return null;
+                    if (notesCount === 0) return null;
                     return (
-                      <SubjectCard key={subject} subject={subject} count={total} icon={<FileText className="w-5 h-5 text-primary" />} />
+                      <SubjectCard key={subject} subject={subject} count={notesCount} icon={<FileText className="w-5 h-5 text-green-500" />} />
                     );
                   })}
                 </div>
+                {lectures.filter(l => l.notes_url).length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">No notes available</p>
+                )}
               </>
             ) : (
               <>
                 <BackToSubjects />
-                <h3 className="font-semibold text-lg mb-4">{selectedSubject} - Notes & DPP</h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="font-medium mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-primary" />
-                      Notes ({notes.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {notes.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No notes available</p>
-                      ) : (
-                        notes.map(lecture => (
-                          <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
-                            <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
-                            <Button size="sm" variant="outline" disabled={!hasAccess && !hasBasicAccess}
-                              onClick={() => (hasAccess || hasBasicAccess) && lecture.notes_url && window.open(lecture.notes_url, '_blank')}>
-                              <Download className="w-4 h-4" />
-                            </Button>
+                <h3 className="font-semibold text-lg mb-4">{selectedSubject} - Notes</h3>
+                <div className="space-y-2">
+                  {notes.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No notes available for this subject</p>
+                  ) : (
+                    notes.map(lecture => (
+                      <div key={lecture.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:border-primary/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-green-500" />
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                  <div>
-                    <h4 className="font-medium mb-3 flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-accent" />
-                      DPP ({dpps.length})
-                    </h4>
-                    <div className="space-y-2">
-                      {dpps.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No DPPs available</p>
-                      ) : (
-                        dpps.map(lecture => (
-                          <div key={lecture.id} className="flex items-center justify-between p-3 bg-card rounded-lg border">
-                            <p className="font-medium text-sm truncate flex-1 mr-2">{lecture.title}</p>
-                            <Button size="sm" variant="outline" disabled={!hasAccess && !hasBasicAccess}
-                              onClick={() => (hasAccess || hasBasicAccess) && lecture.dpp_url && window.open(lecture.dpp_url, '_blank')}>
-                              <Download className="w-4 h-4" />
-                            </Button>
+                          <div>
+                            <p className="font-medium">{lecture.title}</p>
+                            <p className="text-sm text-muted-foreground">{lecture.teacher_name}</p>
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
+                        </div>
+                        <Button size="sm" disabled={!hasAccess && !hasBasicAccess}
+                          onClick={() => (hasAccess || hasBasicAccess) && lecture.notes_url && window.open(lecture.notes_url, '_blank')}>
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </TabsContent>
+
+          {/* DPP Tab */}
+          <TabsContent value="dpp" className="space-y-4">
+            {!selectedSubject ? (
+              <>
+                <h3 className="font-semibold text-lg">Select Subject</h3>
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {subjects.map(subject => {
+                    const dppCount = lectures.filter(l => l.subject === subject && l.dpp_url).length;
+                    if (dppCount === 0) return null;
+                    return (
+                      <SubjectCard key={subject} subject={subject} count={dppCount} icon={<FileText className="w-5 h-5 text-orange-500" />} />
+                    );
+                  })}
+                </div>
+                {lectures.filter(l => l.dpp_url).length === 0 && (
+                  <p className="text-muted-foreground text-center py-8">No DPPs available</p>
+                )}
+              </>
+            ) : (
+              <>
+                <BackToSubjects />
+                <h3 className="font-semibold text-lg mb-4">{selectedSubject} - DPP (Daily Practice Problems)</h3>
+                <div className="space-y-2">
+                  {dpps.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No DPPs available for this subject</p>
+                  ) : (
+                    dpps.map(lecture => (
+                      <div key={lecture.id} className="flex items-center justify-between p-4 bg-card rounded-lg border hover:border-primary/30 transition-colors">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                            <FileText className="w-5 h-5 text-orange-500" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{lecture.title}</p>
+                            <p className="text-sm text-muted-foreground">{lecture.teacher_name}</p>
+                          </div>
+                        </div>
+                        <Button size="sm" disabled={!hasAccess && !hasBasicAccess}
+                          onClick={() => (hasAccess || hasBasicAccess) && lecture.dpp_url && window.open(lecture.dpp_url, '_blank')}>
+                          <Download className="w-4 h-4 mr-2" />
+                          Download
+                        </Button>
+                      </div>
+                    ))
+                  )}
                 </div>
               </>
             )}
