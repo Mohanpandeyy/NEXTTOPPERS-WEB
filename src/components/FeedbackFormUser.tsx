@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { MessageSquare, Send, CheckCircle } from 'lucide-react';
+import { MessageSquare, Send, X } from 'lucide-react';
 
 interface FeedbackForm {
   id: string;
@@ -17,10 +17,10 @@ interface FeedbackForm {
 export default function FeedbackFormUser() {
   const { user } = useSupabaseAuth();
   const [forms, setForms] = useState<FeedbackForm[]>([]);
-  const [submittedForms, setSubmittedForms] = useState<string[]>([]);
   const [currentForm, setCurrentForm] = useState<FeedbackForm | null>(null);
   const [answers, setAnswers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
     if (user) fetchForms();
@@ -45,19 +45,20 @@ export default function FeedbackFormUser() {
       if (responsesError) throw responsesError;
 
       const submittedIds = responsesData?.map(r => r.form_id) || [];
-      setSubmittedForms(submittedIds);
 
       // Filter out already submitted forms
       const pendingForms = (formsData || []).filter(f => !submittedIds.includes(f.id)) as FeedbackForm[];
       setForms(pendingForms);
+
+      // Auto-show popup if there are pending forms
+      if (pendingForms.length > 0) {
+        setShowPopup(true);
+        setCurrentForm(pendingForms[0]);
+        setAnswers(new Array(pendingForms[0].questions.length).fill(''));
+      }
     } catch (error) {
       console.error('Error fetching forms:', error);
     }
-  };
-
-  const openForm = (form: FeedbackForm) => {
-    setCurrentForm(form);
-    setAnswers(new Array(form.questions.length).fill(''));
   };
 
   const handleSubmit = async () => {
@@ -74,6 +75,7 @@ export default function FeedbackFormUser() {
       if (error) throw error;
 
       toast.success('Feedback submitted successfully!');
+      setShowPopup(false);
       setCurrentForm(null);
       setAnswers([]);
       fetchForms();
@@ -84,77 +86,88 @@ export default function FeedbackFormUser() {
     }
   };
 
-  if (forms.length === 0) return null;
+  const handleSkip = () => {
+    setShowPopup(false);
+    // Move to next form if available
+    const currentIndex = forms.findIndex(f => f.id === currentForm?.id);
+    if (currentIndex < forms.length - 1) {
+      const nextForm = forms[currentIndex + 1];
+      setCurrentForm(nextForm);
+      setAnswers(new Array(nextForm.questions.length).fill(''));
+    } else {
+      setCurrentForm(null);
+    }
+  };
+
+  if (!showPopup || !currentForm) return null;
 
   return (
-    <>
-      {/* Pending feedback indicator */}
-      {!currentForm && forms.length > 0 && (
-        <Card className="border-primary/50 bg-primary/5 mb-6">
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <MessageSquare className="w-6 h-6 text-primary" />
-                <div>
-                  <p className="font-medium">You have {forms.length} pending feedback form(s)</p>
-                  <p className="text-sm text-muted-foreground">Please share your feedback</p>
-                </div>
-              </div>
-              <Button onClick={() => openForm(forms[0])}>
-                Fill Now
-              </Button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+      <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl border-primary/20">
+        <CardHeader className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleSkip}
+            className="absolute right-4 top-4"
+          >
+            <X className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center">
+              <MessageSquare className="w-6 h-6 text-primary-foreground" />
             </div>
-          </CardContent>
-        </Card>
-      )}
+            <div>
+              <CardTitle className="text-xl">{currentForm.title}</CardTitle>
+              <CardDescription>We'd love your feedback!</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {currentForm.questions.map((question, i) => (
+            <div key={i} className="space-y-2">
+              <label className="font-medium text-sm">
+                {i + 1}. {question}
+              </label>
+              <Textarea
+                value={answers[i]}
+                onChange={(e) => {
+                  const newAnswers = [...answers];
+                  newAnswers[i] = e.target.value;
+                  setAnswers(newAnswers);
+                }}
+                placeholder="Your answer..."
+                rows={3}
+                className="resize-none"
+              />
+            </div>
+          ))}
 
-      {/* Feedback form modal */}
-      {currentForm && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare className="w-5 h-5" />
-                {currentForm.title}
-              </CardTitle>
-              <CardDescription>Please answer all questions below</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {currentForm.questions.map((question, i) => (
-                <div key={i} className="space-y-2">
-                  <label className="font-medium text-sm">
-                    {i + 1}. {question}
-                  </label>
-                  <Textarea
-                    value={answers[i]}
-                    onChange={(e) => {
-                      const newAnswers = [...answers];
-                      newAnswers[i] = e.target.value;
-                      setAnswers(newAnswers);
-                    }}
-                    placeholder="Your answer..."
-                    rows={3}
-                  />
-                </div>
-              ))}
-
-              <div className="flex gap-2 pt-4">
-                <Button variant="outline" onClick={() => setCurrentForm(null)} className="flex-1">
-                  Later
-                </Button>
-                <Button 
-                  onClick={handleSubmit} 
-                  disabled={isSubmitting || answers.some(a => !a.trim())}
-                  className="flex-1"
-                >
-                  <Send className="w-4 h-4 mr-2" />
-                  {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-    </>
+          <div className="flex gap-3 pt-4">
+            <Button 
+              variant="outline" 
+              onClick={handleSkip} 
+              className="flex-1"
+            >
+              Skip for now
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isSubmitting || answers.some(a => !a.trim())}
+              className="flex-1 gradient-primary"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {isSubmitting ? 'Submitting...' : 'Submit'}
+            </Button>
+          </div>
+          
+          {forms.length > 1 && (
+            <p className="text-xs text-center text-muted-foreground pt-2">
+              {forms.length} feedback form(s) pending
+            </p>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -10,11 +10,28 @@ import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import VideoPlayer from '@/components/VideoPlayer';
 import { cn } from '@/lib/utils';
 
+// Format time in IST
+const formatTimeIST = (dateString: string) => {
+  return new Date(dateString).toLocaleTimeString('en-IN', { 
+    hour: '2-digit', 
+    minute: '2-digit',
+    timeZone: 'Asia/Kolkata',
+    hour12: true
+  });
+};
+
+const formatDateIST = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-IN', {
+    timeZone: 'Asia/Kolkata'
+  });
+};
+
 export default function TodayLive() {
   const { user, isLoading: authLoading } = useSupabaseAuth();
   const navigate = useNavigate();
   const [showPlayer, setShowPlayer] = useState(false);
   const [currentLive, setCurrentLive] = useState<any>(null);
+  const [countdowns, setCountdowns] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -45,6 +62,43 @@ export default function TodayLive() {
     refetchInterval: 30000, // Refetch every 30 seconds
   });
 
+  // Update countdowns every second
+  useEffect(() => {
+    const updateCountdowns = () => {
+      const now = new Date().getTime();
+      const newCountdowns: Record<string, string> = {};
+      
+      liveClasses.forEach((liveClass: any) => {
+        if (liveClass.status !== 'live' && liveClass.status !== 'ended') {
+          const scheduled = new Date(liveClass.scheduled_time).getTime();
+          const diff = scheduled - now;
+          
+          if (diff <= 0) {
+            newCountdowns[liveClass.id] = 'Starting soon...';
+          } else {
+            const hours = Math.floor(diff / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            if (hours > 0) {
+              newCountdowns[liveClass.id] = `${hours}h ${minutes}m ${seconds}s`;
+            } else if (minutes > 0) {
+              newCountdowns[liveClass.id] = `${minutes}m ${seconds}s`;
+            } else {
+              newCountdowns[liveClass.id] = `${seconds}s`;
+            }
+          }
+        }
+      });
+      
+      setCountdowns(newCountdowns);
+    };
+
+    updateCountdowns();
+    const interval = setInterval(updateCountdowns, 1000);
+    return () => clearInterval(interval);
+  }, [liveClasses]);
+
   // Fetch notifications
   const { data: notifications = [] } = useQuery({
     queryKey: ['user-notifications', user?.id],
@@ -69,20 +123,6 @@ export default function TodayLive() {
       setCurrentLive(liveClass);
       setShowPlayer(true);
     }
-  };
-
-  const getTimeUntilLive = (scheduledTime: string) => {
-    const now = new Date();
-    const scheduled = new Date(scheduledTime);
-    const diff = scheduled.getTime() - now.getTime();
-    
-    if (diff <= 0) return 'Starting soon...';
-    
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (hours > 0) return `Starts in ${hours}h ${minutes}m`;
-    return `Starts in ${minutes}m`;
   };
 
   if (authLoading || !user) {
@@ -141,6 +181,7 @@ export default function TodayLive() {
             {liveClasses.map((liveClass: any, i: number) => {
               const isLive = liveClass.status === 'live';
               const isEnded = liveClass.status === 'ended';
+              const countdown = countdowns[liveClass.id];
               
               return (
                 <Card 
@@ -153,7 +194,7 @@ export default function TodayLive() {
                 >
                   <CardContent className="p-0">
                     <div className="flex flex-col md:flex-row">
-                      {/* Thumbnail */}
+                      {/* Thumbnail with countdown overlay */}
                       <div className="relative md:w-72 aspect-video md:aspect-auto flex-shrink-0">
                         <img
                           src={liveClass.thumbnail_url || liveClass.batches?.thumbnail_url || '/placeholder.svg'}
@@ -171,6 +212,17 @@ export default function TodayLive() {
                         {isEnded && (
                           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                             <Badge variant="secondary">Ended</Badge>
+                          </div>
+                        )}
+                        {/* Countdown overlay */}
+                        {!isLive && !isEnded && countdown && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                            <div className="text-center">
+                              <div className="text-white/70 text-sm mb-1">Starts in</div>
+                              <div className="text-white text-2xl font-bold font-mono">
+                                {countdown}
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -196,11 +248,11 @@ export default function TodayLive() {
                           )}
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4" />
-                            {new Date(liveClass.scheduled_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            {formatTimeIST(liveClass.scheduled_time)} IST
                           </div>
                           <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            {new Date(liveClass.scheduled_time).toLocaleDateString()}
+                            {formatDateIST(liveClass.scheduled_time)}
                           </div>
                         </div>
 
@@ -215,9 +267,9 @@ export default function TodayLive() {
                           </Button>
                         ) : (
                           <div className="flex items-center gap-3">
-                            <Button variant="outline" disabled>
+                            <Button variant="outline" disabled className="font-mono">
                               <Clock className="w-4 h-4 mr-2" />
-                              {getTimeUntilLive(liveClass.scheduled_time)}
+                              {countdown}
                             </Button>
                           </div>
                         )}
