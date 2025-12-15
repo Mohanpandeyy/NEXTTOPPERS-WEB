@@ -61,12 +61,16 @@ interface Batch {
   name: string;
 }
 
-const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Social Science'];
+interface Subject {
+  id: string;
+  name: string;
+}
 
 export default function AdminLiveClasses() {
   const { toast } = useToast();
   const [liveClasses, setLiveClasses] = useState<LiveClass[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingClass, setEditingClass] = useState<LiveClass | null>(null);
@@ -90,16 +94,19 @@ export default function AdminLiveClasses() {
 
   const fetchData = async () => {
     try {
-      const [classesRes, batchesRes] = await Promise.all([
+      const [classesRes, batchesRes, subjectsRes] = await Promise.all([
         supabase.from('live_classes').select('*, batches(name)').order('scheduled_time', { ascending: false }),
         supabase.from('batches').select('id, name').order('name'),
+        supabase.from('subjects').select('id, name').order('sort_order'),
       ]);
 
       if (classesRes.error) throw classesRes.error;
       if (batchesRes.error) throw batchesRes.error;
+      if (subjectsRes.error) throw subjectsRes.error;
 
       setLiveClasses(classesRes.data || []);
       setBatches(batchesRes.data || []);
+      setSubjects(subjectsRes.data || []);
     } catch (error) {
       toast({ title: 'Error', description: 'Failed to load data', variant: 'destructive' });
     } finally {
@@ -381,7 +388,7 @@ export default function AdminLiveClasses() {
               <Select value={formData.subject} onValueChange={(v) => setFormData(p => ({ ...p, subject: v }))}>
                 <SelectTrigger><SelectValue placeholder="Select subject" /></SelectTrigger>
                 <SelectContent>
-                  {SUBJECTS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {subjects.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

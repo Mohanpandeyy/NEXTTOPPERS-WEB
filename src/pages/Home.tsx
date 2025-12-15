@@ -5,6 +5,8 @@ import BatchCard from '@/components/cards/BatchCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { useAppSettings } from '@/hooks/useAppSettings';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import FeedbackFormUser from '@/components/FeedbackFormUser';
 
 const categories = [
   { name: 'JEE', icon: '🎯', color: 'bg-primary/10 text-primary' },
@@ -24,6 +26,7 @@ const stats = [
 
 export default function Home() {
   const { appName, logoUrl } = useAppSettings();
+  const { user } = useSupabaseAuth();
   
   const { data: batches = [] } = useQuery({
     queryKey: ['public-batches'],
@@ -40,6 +43,9 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
+      {/* Feedback forms for logged in users */}
+      {user && <div className="container mx-auto px-4 pt-6"><FeedbackFormUser /></div>}
+      
       {/* Hero Section */}
       <section className="relative gradient-hero overflow-hidden min-h-[90vh] flex items-center">
         {/* Animated background elements */}

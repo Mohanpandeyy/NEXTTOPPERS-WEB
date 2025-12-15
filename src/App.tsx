@@ -24,6 +24,7 @@ import AdminCustomSections from "@/pages/admin/AdminCustomSections";
 import AdminLiveClasses from "@/pages/admin/AdminLiveClasses";
 import AdminNotifications from "@/pages/admin/AdminNotifications";
 import AdminVerifications from "@/pages/admin/AdminVerifications";
+import AdminFeedback from "@/pages/admin/AdminFeedback";
 import NotFound from "@/pages/NotFound";
 import VerifySuccess from "@/pages/VerifySuccess";
 import PremiumContent from "@/pages/PremiumContent";
@@ -58,6 +59,7 @@ const App = () => (
               <Route path="notifications" element={<AdminNotifications />} />
               <Route path="timetables" element={<AdminTimetables />} />
               <Route path="verifications" element={<AdminVerifications />} />
+              <Route path="feedback" element={<AdminFeedback />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="sections" element={<AdminCustomSections />} />
               <Route path="media" element={<AdminMedia />} />
