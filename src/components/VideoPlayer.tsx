@@ -8,6 +8,7 @@ interface VideoPlayerProps {
   videoUrl: string;
   title: string;
   onClose: () => void;
+  isLive?: boolean;
 }
 
 // Helper to detect video type from URL
@@ -31,7 +32,7 @@ const getVimeoId = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
-export default function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerProps) {
+export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }: VideoPlayerProps) {
   const videoType = getVideoType(videoUrl);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -162,8 +163,9 @@ export default function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerPro
       >
         {videoType === 'youtube' && (
           <iframe
-            src={`https://www.youtube.com/embed/${getYouTubeId(videoUrl)}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
-            className="w-full h-full max-h-[80vh] aspect-video"
+            src={`https://www.youtube.com/embed/${getYouTubeId(videoUrl)}?autoplay=1&rel=0&modestbranding=1&playsinline=1${isLive ? '&live=1' : ''}`}
+            className="w-full h-full"
+            style={{ width: '100vw', height: '100vh', maxHeight: 'calc(100vh - 80px)' }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             referrerPolicy="strict-origin-when-cross-origin"
@@ -173,8 +175,9 @@ export default function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerPro
 
         {videoType === 'vimeo' && (
           <iframe
-            src={`https://player.vimeo.com/video/${getVimeoId(videoUrl)}?autoplay=1`}
-            className="w-full h-full max-h-[80vh] aspect-video"
+            src={`https://player.vimeo.com/video/${getVimeoId(videoUrl)}?autoplay=1${isLive ? '&live=1' : ''}`}
+            className="w-full h-full"
+            style={{ width: '100vw', height: '100vh', maxHeight: 'calc(100vh - 80px)' }}
             allow="autoplay; fullscreen; picture-in-picture"
             allowFullScreen
           />
@@ -185,7 +188,8 @@ export default function VideoPlayer({ videoUrl, title, onClose }: VideoPlayerPro
             <video
               ref={videoRef}
               src={videoUrl}
-              className="max-w-full max-h-[80vh] w-auto h-auto"
+              className="w-full h-full object-contain"
+              style={{ maxHeight: 'calc(100vh - 80px)' }}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onEnded={() => setIsPlaying(false)}
