@@ -5,14 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -37,7 +29,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Plus, Pencil, Trash2, Calendar, Upload, Image } from 'lucide-react';
+import { Plus, Pencil, Trash2, Calendar, Upload, Link as LinkIcon, Image } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Batch {
   id: string;
@@ -63,7 +56,6 @@ interface Timetable {
 }
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const SUBJECTS = ['Physics', 'Chemistry', 'Maths', 'Biology', 'English', 'Hindi', 'Social Science'];
 
 export default function AdminTimetables() {
   const { toast } = useToast();
@@ -79,15 +71,14 @@ export default function AdminTimetables() {
   const [editingEntry, setEditingEntry] = useState<TimetableEntry | null>(null);
   const [deletingEntry, setDeletingEntry] = useState<TimetableEntry | null>(null);
   
-  // Form state
+  // Form state - simplified to image only
   const [formData, setFormData] = useState({
     day: 'Monday',
-    time: '10:00 AM',
-    subject: 'Physics',
-    topic: '',
-    teacher: '',
+    time: '',
+    subject: '',
     image_url: '',
   });
+  const [imageInputType, setImageInputType] = useState<'upload' | 'link'>('upload');
   const [isUploading, setIsUploading] = useState(false);
 
   // Week range form
@@ -126,7 +117,6 @@ export default function AdminTimetables() {
 
   const fetchTimetable = async () => {
     try {
-      // First get or create timetable for this batch
       let { data: timetableData, error: timetableError } = await supabase
         .from('timetables')
         .select('*')
@@ -136,7 +126,6 @@ export default function AdminTimetables() {
       if (timetableError) throw timetableError;
       
       if (!timetableData) {
-        // Create timetable for this batch
         const { data: newTimetable, error: createError } = await supabase
           .from('timetables')
           .insert([{ batch_id: selectedBatch }])
@@ -150,7 +139,6 @@ export default function AdminTimetables() {
       setTimetable(timetableData);
       setWeekRange(timetableData.week_range || '');
       
-      // Fetch entries
       const { data: entriesData, error: entriesError } = await supabase
         .from('timetable_entries')
         .select('*')
@@ -189,12 +177,11 @@ export default function AdminTimetables() {
   const resetForm = () => {
     setFormData({
       day: 'Monday',
-      time: '10:00 AM',
-      subject: 'Physics',
-      topic: '',
-      teacher: '',
+      time: '',
+      subject: '',
       image_url: '',
     });
+    setImageInputType('upload');
     setEditingEntry(null);
   };
 
@@ -236,27 +223,31 @@ export default function AdminTimetables() {
     setEditingEntry(entry);
     setFormData({
       day: entry.day,
-      time: entry.time,
-      subject: entry.subject,
-      topic: entry.topic || '',
-      teacher: entry.teacher || '',
+      time: entry.time || '',
+      subject: entry.subject || '',
       image_url: entry.image_url || '',
     });
+    setImageInputType(entry.image_url?.startsWith('http') ? 'link' : 'upload');
     setIsFormOpen(true);
   };
 
   const handleSubmit = async () => {
     if (!timetable) return;
+    
+    if (!formData.image_url) {
+      toast({ title: 'Error', description: 'Please upload an image or provide a link', variant: 'destructive' });
+      return;
+    }
 
     try {
       const entryData = {
         timetable_id: timetable.id,
         day: formData.day,
-        time: formData.time,
-        subject: formData.subject,
-        topic: formData.topic || null,
-        teacher: formData.teacher || null,
-        image_url: formData.image_url || null,
+        time: formData.time || 'All Day',
+        subject: formData.subject || 'Timetable',
+        topic: null,
+        teacher: null,
+        image_url: formData.image_url,
       };
 
       if (editingEntry) {
@@ -326,7 +317,7 @@ export default function AdminTimetables() {
         <h1 className="text-2xl font-bold">Timetables</h1>
         <Button onClick={handleOpenCreate} disabled={!selectedBatch}>
           <Plus className="w-4 h-4 mr-2" />
-          Add Entry
+          Add Image
         </Button>
       </div>
 
@@ -371,7 +362,7 @@ export default function AdminTimetables() {
         )}
       </div>
 
-      {/* Timetable Grid */}
+      {/* Timetable Grid - Image Based */}
       {selectedBatch && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {DAYS.map(day => (
@@ -384,34 +375,40 @@ export default function AdminTimetables() {
               </CardHeader>
               <CardContent className="space-y-2">
                 {entriesByDay[day].length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-4">No classes</p>
+                  <p className="text-sm text-muted-foreground text-center py-4">No timetable image</p>
                 ) : (
                   entriesByDay[day].map(entry => (
-                    <div key={entry.id} className="p-3 rounded-lg bg-muted/50 space-y-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-medium text-sm">{entry.time}</p>
-                          <p className="text-primary font-semibold">{entry.subject}</p>
-                          {entry.topic && <p className="text-sm text-muted-foreground">{entry.topic}</p>}
-                          {entry.teacher && <p className="text-xs text-muted-foreground">by {entry.teacher}</p>}
-                        </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleOpenEdit(entry)}>
-                            <Pencil className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => {
-                              setDeletingEntry(entry);
-                              setIsDeleteOpen(true);
-                            }}
-                          >
-                            <Trash2 className="w-3 h-3 text-destructive" />
-                          </Button>
-                        </div>
+                    <div key={entry.id} className="relative rounded-lg overflow-hidden border group">
+                      {entry.image_url ? (
+                        <img 
+                          src={entry.image_url} 
+                          alt={`${day} timetable`} 
+                          className="w-full h-auto object-contain"
+                        />
+                      ) : (
+                        <div className="p-4 text-center text-muted-foreground">No image</div>
+                      )}
+                      <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="secondary" size="icon" className="h-7 w-7" onClick={() => handleOpenEdit(entry)}>
+                          <Pencil className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            setDeletingEntry(entry);
+                            setIsDeleteOpen(true);
+                          }}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
                       </div>
+                      {entry.time && entry.time !== 'All Day' && (
+                        <div className="absolute bottom-2 left-2 bg-background/80 px-2 py-1 rounded text-xs">
+                          {entry.time}
+                        </div>
+                      )}
                     </div>
                   ))
                 )}
@@ -421,17 +418,20 @@ export default function AdminTimetables() {
         </div>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* Create/Edit Dialog - Simplified for Images */}
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingEntry ? 'Edit Entry' : 'Add Timetable Entry'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Image className="w-5 h-5" />
+              {editingEntry ? 'Edit Timetable Image' : 'Add Timetable Image'}
+            </DialogTitle>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Day</Label>
+                <Label>Day *</Label>
                 <Select value={formData.day} onValueChange={(v) => setFormData(prev => ({ ...prev, day: v }))}>
                   <SelectTrigger>
                     <SelectValue />
@@ -444,68 +444,67 @@ export default function AdminTimetables() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Time</Label>
+                <Label>Time (Optional)</Label>
                 <Input
                   value={formData.time}
                   onChange={(e) => setFormData(prev => ({ ...prev, time: e.target.value }))}
-                  placeholder="10:00 AM"
+                  placeholder="e.g., 10:00 AM"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Subject</Label>
-              <Select value={formData.subject} onValueChange={(v) => setFormData(prev => ({ ...prev, subject: v }))}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {SUBJECTS.map(subject => (
-                    <SelectItem key={subject} value={subject}>{subject}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Topic</Label>
+              <Label>Label (Optional)</Label>
               <Input
-                value={formData.topic}
-                onChange={(e) => setFormData(prev => ({ ...prev, topic: e.target.value }))}
-                placeholder="Laws of Motion"
+                value={formData.subject}
+                onChange={(e) => setFormData(prev => ({ ...prev, subject: e.target.value }))}
+                placeholder="e.g., Physics Schedule"
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Teacher</Label>
-              <Input
-                value={formData.teacher}
-                onChange={(e) => setFormData(prev => ({ ...prev, teacher: e.target.value }))}
-                placeholder="Dr. John Doe"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Timetable Image (Optional)</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  disabled={isUploading}
-                />
-              </div>
+              <Label>Timetable Image *</Label>
+              <Tabs value={imageInputType} onValueChange={(v) => setImageInputType(v as 'upload' | 'link')}>
+                <TabsList className="w-full">
+                  <TabsTrigger value="upload" className="flex-1 gap-2">
+                    <Upload className="w-4 h-4" />
+                    Upload
+                  </TabsTrigger>
+                  <TabsTrigger value="link" className="flex-1 gap-2">
+                    <LinkIcon className="w-4 h-4" />
+                    Link
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="upload" className="mt-3">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    disabled={isUploading}
+                  />
+                  {isUploading && <p className="text-sm text-muted-foreground mt-2">Uploading...</p>}
+                </TabsContent>
+                <TabsContent value="link" className="mt-3">
+                  <Input
+                    value={formData.image_url}
+                    onChange={(e) => setFormData(prev => ({ ...prev, image_url: e.target.value }))}
+                    placeholder="Paste image URL..."
+                  />
+                </TabsContent>
+              </Tabs>
+              
               {formData.image_url && (
-                <img src={formData.image_url} alt="Timetable" className="mt-2 max-h-32 rounded-lg border" />
+                <div className="mt-3 rounded-lg overflow-hidden border">
+                  <img src={formData.image_url} alt="Preview" className="w-full h-auto max-h-48 object-contain" />
+                </div>
               )}
-              <p className="text-xs text-muted-foreground">Upload an image instead of text entries</p>
             </div>
           </div>
-
+          
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsFormOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit}>
-              {editingEntry ? 'Update Entry' : 'Add Entry'}
+            <Button onClick={handleSubmit} disabled={isUploading || !formData.image_url}>
+              {editingEntry ? 'Update' : 'Add'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -517,7 +516,7 @@ export default function AdminTimetables() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Entry</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete this timetable entry? This action cannot be undone.
+              Are you sure you want to delete this timetable image? This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

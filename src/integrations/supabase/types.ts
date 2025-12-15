@@ -661,9 +661,11 @@ export type Database = {
           created_at: string
           expires_at: string
           id: string
+          status: string | null
           token: string
           used: boolean
           user_id: string
+          verified_at: string | null
         }
         Insert: {
           code?: string | null
@@ -671,9 +673,11 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          status?: string | null
           token: string
           used?: boolean
           user_id: string
+          verified_at?: string | null
         }
         Update: {
           code?: string | null
@@ -681,9 +685,11 @@ export type Database = {
           created_at?: string
           expires_at?: string
           id?: string
+          status?: string | null
           token?: string
           used?: boolean
           user_id?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
@@ -692,6 +698,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_old_notifications: { Args: never; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

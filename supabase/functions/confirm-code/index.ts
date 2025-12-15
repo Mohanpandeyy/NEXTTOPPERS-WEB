@@ -46,10 +46,14 @@ serve(async (req) => {
       });
     }
 
-    // Mark token as used
+    // Mark token as used and update status
     await supabase
       .from('verification_tokens')
-      .update({ used: true })
+      .update({ 
+        used: true,
+        status: 'verified',
+        verified_at: new Date().toISOString()
+      })
       .eq('id', tokenData.id);
 
     // Grant 36-hour access
@@ -97,6 +101,8 @@ serve(async (req) => {
     if (supabaseUrl.includes('supabase.co')) {
       cookieOptions.push('Secure');
     }
+
+    console.log(`Access granted for user ${tokenData.user_id} - expires ${expiresAt.toISOString()}`);
 
     return new Response(JSON.stringify({ 
       success: true,
