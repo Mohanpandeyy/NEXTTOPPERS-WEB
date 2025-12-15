@@ -297,10 +297,13 @@ export default function AdminFeedback() {
             </div>
             <div className="space-y-2">
               <Label>Target Batch (optional)</Label>
-              <Select value={formData.batch_id} onValueChange={(v) => setFormData(p => ({ ...p, batch_id: v }))}>
+              <Select 
+                value={formData.batch_id || "all"} 
+                onValueChange={(v) => setFormData(p => ({ ...p, batch_id: v === "all" ? "" : v }))}
+              >
                 <SelectTrigger><SelectValue placeholder="All users" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Users</SelectItem>
+                  <SelectItem value="all">All Users</SelectItem>
                   {batches.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
                 </SelectContent>
               </Select>
