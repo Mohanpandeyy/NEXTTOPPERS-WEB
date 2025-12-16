@@ -9,23 +9,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { Database } from '@/integrations/supabase/types';
 
-type ExamType = Database['public']['Enums']['exam_type'];
 type BatchStatus = Database['public']['Enums']['batch_status'];
 
-const examTypes: ExamType[] = ['JEE', 'NEET', 'Boards', 'Foundation', '9-10', '11-12'];
 const statusTypes: BatchStatus[] = ['ongoing', 'upcoming', 'completed'];
 
 export default function Batches() {
   const [searchParams, setSearchParams] = useSearchParams();
   
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedExam, setSelectedExam] = useState<ExamType | null>(
-    (searchParams.get('exam') as ExamType) || null
-  );
   const [selectedStatus, setSelectedStatus] = useState<BatchStatus | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: batches = [] } = useQuery({
+  const { data: batches = [], isLoading } = useQuery({
     queryKey: ['batches'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,30 +46,36 @@ export default function Batches() {
         }
       }
       
-      if (selectedExam && batch.target_exam !== selectedExam) return false;
       if (selectedStatus && batch.status !== selectedStatus) return false;
       
       return true;
     });
-  }, [batches, searchQuery, selectedExam, selectedStatus]);
+  }, [batches, searchQuery, selectedStatus]);
 
   const clearFilters = () => {
     setSearchQuery('');
-    setSelectedExam(null);
     setSelectedStatus(null);
     setSearchParams({});
   };
 
-  const hasActiveFilters = searchQuery || selectedExam || selectedStatus;
+  const hasActiveFilters = searchQuery || selectedStatus;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">All Batches</h1>
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">All Courses</h1>
           <p className="text-muted-foreground">
-            Find the perfect course for your preparation journey
+            Find the perfect course for your learning journey
           </p>
         </div>
 
@@ -83,7 +84,7 @@ export default function Batches() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
-              placeholder="Search batches..."
+              placeholder="Search courses..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10"
@@ -104,7 +105,7 @@ export default function Batches() {
           <aside
             className={`${
               showFilters ? 'fixed inset-0 z-50 bg-background p-4' : 'hidden'
-            } md:relative md:block md:w-64 flex-shrink-0`}
+            } md:relative md:block md:w-56 flex-shrink-0`}
           >
             <div className="flex items-center justify-between mb-6 md:hidden">
               <h3 className="font-semibold">Filters</h3>
@@ -114,32 +115,15 @@ export default function Batches() {
             </div>
 
             <div className="space-y-6">
-              {/* Exam Type Filter */}
-              <div>
-                <h4 className="font-medium mb-3">Target Exam</h4>
-                <div className="flex flex-wrap gap-2">
-                  {examTypes.map((exam) => (
-                    <Badge
-                      key={exam}
-                      variant={selectedExam === exam ? 'default' : 'outline'}
-                      className="cursor-pointer"
-                      onClick={() => setSelectedExam(selectedExam === exam ? null : exam)}
-                    >
-                      {exam}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
               {/* Status Filter */}
               <div>
                 <h4 className="font-medium mb-3">Status</h4>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-col gap-2">
                   {statusTypes.map((status) => (
                     <Badge
                       key={status}
                       variant={selectedStatus === status ? 'default' : 'outline'}
-                      className="cursor-pointer capitalize"
+                      className="cursor-pointer capitalize justify-center py-2"
                       onClick={() => setSelectedStatus(selectedStatus === status ? null : status)}
                     >
                       {status}
@@ -179,15 +163,6 @@ export default function Batches() {
                     />
                   </Badge>
                 )}
-                {selectedExam && (
-                  <Badge variant="secondary" className="gap-1">
-                    {selectedExam}
-                    <X
-                      className="w-3 h-3 cursor-pointer"
-                      onClick={() => setSelectedExam(null)}
-                    />
-                  </Badge>
-                )}
                 {selectedStatus && (
                   <Badge variant="secondary" className="gap-1 capitalize">
                     {selectedStatus}
@@ -203,7 +178,7 @@ export default function Batches() {
             {filteredBatches.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-6xl mb-4">📚</div>
-                <h3 className="text-xl font-semibold mb-2">No batches found</h3>
+                <h3 className="text-xl font-semibold mb-2">No courses found</h3>
                 <p className="text-muted-foreground mb-4">
                   Try adjusting your filters or search query
                 </p>
@@ -214,7 +189,7 @@ export default function Batches() {
             ) : (
               <>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Showing {filteredBatches.length} batches
+                  Showing {filteredBatches.length} courses
                 </p>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {filteredBatches.map((batch, i) => (

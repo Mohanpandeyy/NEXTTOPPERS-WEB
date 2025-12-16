@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward, PictureInPicture, Settings } from 'lucide-react';
+import { X, Play, Pause, Volume2, VolumeX, Maximize, Minimize, SkipBack, SkipForward, PictureInPicture, Settings, Radio, Rewind } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { cn } from '@/lib/utils';
@@ -8,6 +8,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 
 interface VideoPlayerProps {
@@ -44,6 +46,7 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
   const videoType = getVideoType(videoUrl);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -145,6 +148,17 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Go to live (for YouTube/Vimeo - reload iframe to sync)
+  const goToLive = () => {
+    if (iframeRef.current) {
+      const currentSrc = iframeRef.current.src;
+      iframeRef.current.src = '';
+      setTimeout(() => {
+        if (iframeRef.current) iframeRef.current.src = currentSrc;
+      }, 100);
+    }
+  };
+
   // Listen for PiP exit
   useEffect(() => {
     const handlePiPExit = () => setIsPiP(false);
@@ -189,10 +203,31 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
     <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-gradient-to-b from-black/80 to-transparent absolute top-0 left-0 right-0 z-10">
-        <h2 className="text-white font-semibold truncate pr-4">{title}</h2>
-        <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
-          <X className="w-6 h-6" />
-        </Button>
+        <div className="flex items-center gap-3">
+          <h2 className="text-white font-semibold truncate pr-4">{title}</h2>
+          {isLive && (
+            <span className="flex items-center gap-1 px-2 py-1 bg-red-500 text-white text-xs rounded-full animate-pulse">
+              <Radio className="w-3 h-3" />
+              LIVE
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {isLive && videoType !== 'direct' && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={goToLive}
+              className="text-white hover:bg-white/20 text-xs"
+            >
+              <Rewind className="w-4 h-4 mr-1" />
+              Go Live
+            </Button>
+          )}
+          <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
+            <X className="w-6 h-6" />
+          </Button>
+        </div>
       </div>
 
       {/* Video Container */}
@@ -204,6 +239,7 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
       >
         {videoType === 'youtube' && (
           <iframe
+            ref={iframeRef}
             src={`https://www.youtube.com/embed/${getYouTubeId(videoUrl)}?autoplay=1&rel=0&modestbranding=1&playsinline=1${isLive ? '&live=1' : ''}`}
             className="w-full h-full"
             style={{ width: '100vw', height: '100vh', maxHeight: 'calc(100vh - 80px)' }}
@@ -216,6 +252,7 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
 
         {videoType === 'vimeo' && (
           <iframe
+            ref={iframeRef}
             src={`https://player.vimeo.com/video/${getVimeoId(videoUrl)}?autoplay=1${isLive ? '&live=1' : ''}`}
             className="w-full h-full"
             style={{ width: '100vw', height: '100vh', maxHeight: 'calc(100vh - 80px)' }}
@@ -270,19 +307,19 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
               </div>
 
               {/* Control buttons */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="icon" onClick={() => skip(-10)} className="text-white hover:bg-white/20">
-                    <SkipBack className="w-5 h-5" />
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-1 md:gap-2">
+                  <Button variant="ghost" size="icon" onClick={() => skip(-10)} className="text-white hover:bg-white/20 w-8 h-8 md:w-10 md:h-10">
+                    <SkipBack className="w-4 h-4 md:w-5 md:h-5" />
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={handlePlayPause} className="text-white hover:bg-white/20">
-                    {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+                  <Button variant="ghost" size="icon" onClick={handlePlayPause} className="text-white hover:bg-white/20 w-10 h-10 md:w-12 md:h-12">
+                    {isPlaying ? <Pause className="w-5 h-5 md:w-6 md:h-6" /> : <Play className="w-5 h-5 md:w-6 md:h-6" />}
                   </Button>
-                  <Button variant="ghost" size="icon" onClick={() => skip(10)} className="text-white hover:bg-white/20">
-                    <SkipForward className="w-5 h-5" />
+                  <Button variant="ghost" size="icon" onClick={() => skip(10)} className="text-white hover:bg-white/20 w-8 h-8 md:w-10 md:h-10">
+                    <SkipForward className="w-4 h-4 md:w-5 md:h-5" />
                   </Button>
                   
-                  <div className="flex items-center gap-2 ml-4">
+                  <div className="hidden md:flex items-center gap-2 ml-2">
                     <Button variant="ghost" size="icon" onClick={toggleMute} className="text-white hover:bg-white/20">
                       {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
                     </Button>
@@ -291,20 +328,21 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
                       max={1}
                       step={0.1}
                       onValueChange={handleVolumeChange}
-                      className="w-24"
+                      className="w-20"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Speed selector */}
+                <div className="flex items-center gap-1 md:gap-2">
+                  {/* Settings dropdown with all options */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="text-white hover:bg-white/20 text-xs px-2">
-                        {playbackSpeed}x
+                      <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 w-8 h-8 md:w-10 md:h-10">
+                        <Settings className="w-4 h-4 md:w-5 md:h-5" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-black/90 border-white/20">
+                    <DropdownMenuContent align="end" className="bg-black/90 border-white/20 min-w-[180px]">
+                      <DropdownMenuLabel className="text-white/70 text-xs">Playback Speed</DropdownMenuLabel>
                       {SPEED_OPTIONS.map((speed) => (
                         <DropdownMenuItem
                           key={speed}
@@ -314,26 +352,34 @@ export default function VideoPlayer({ videoUrl, title, onClose, isLive = false }
                             playbackSpeed === speed && "bg-primary/50"
                           )}
                         >
-                          {speed}x
+                          {speed}x {playbackSpeed === speed && '✓'}
                         </DropdownMenuItem>
                       ))}
+                      
+                      <DropdownMenuSeparator className="bg-white/20" />
+                      
+                      {document.pictureInPictureEnabled && (
+                        <DropdownMenuItem
+                          onClick={togglePiP}
+                          className="text-white hover:bg-white/20 cursor-pointer"
+                        >
+                          <PictureInPicture className="w-4 h-4 mr-2" />
+                          Picture in Picture {isPiP && '✓'}
+                        </DropdownMenuItem>
+                      )}
+                      
+                      <DropdownMenuItem
+                        onClick={toggleMute}
+                        className="text-white hover:bg-white/20 cursor-pointer md:hidden"
+                      >
+                        {isMuted ? <VolumeX className="w-4 h-4 mr-2" /> : <Volume2 className="w-4 h-4 mr-2" />}
+                        {isMuted ? 'Unmute' : 'Mute'}
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  {/* PiP button */}
-                  {document.pictureInPictureEnabled && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      onClick={togglePiP} 
-                      className={cn("text-white hover:bg-white/20", isPiP && "bg-primary/50")}
-                    >
-                      <PictureInPicture className="w-5 h-5" />
-                    </Button>
-                  )}
-
-                  <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:bg-white/20">
-                    {isFullscreen ? <Minimize className="w-5 h-5" /> : <Maximize className="w-5 h-5" />}
+                  <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="text-white hover:bg-white/20 w-8 h-8 md:w-10 md:h-10">
+                    {isFullscreen ? <Minimize className="w-4 h-4 md:w-5 md:h-5" /> : <Maximize className="w-4 h-4 md:w-5 md:h-5" />}
                   </Button>
                 </div>
               </div>
