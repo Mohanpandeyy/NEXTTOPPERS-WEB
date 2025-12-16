@@ -14,6 +14,9 @@ interface FeedbackForm {
   batch_id: string | null;
 }
 
+const SKIP_STORAGE_KEY = 'feedback_skip_timestamp';
+const SKIP_DELAY_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+
 export default function FeedbackFormUser() {
   const { user } = useSupabaseAuth();
   const [forms, setForms] = useState<FeedbackForm[]>([]);
@@ -23,7 +26,25 @@ export default function FeedbackFormUser() {
   const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
-    if (user) fetchForms();
+    if (user) {
+      // Check if user skipped recently
+      const skipTimestamp = localStorage.getItem(SKIP_STORAGE_KEY);
+      if (skipTimestamp) {
+        const timeSinceSkip = Date.now() - parseInt(skipTimestamp);
+        if (timeSinceSkip < SKIP_DELAY_MS) {
+          // Don't show popup yet, schedule to show after remaining time
+          const remainingTime = SKIP_DELAY_MS - timeSinceSkip;
+          const timeout = setTimeout(() => {
+            localStorage.removeItem(SKIP_STORAGE_KEY);
+            fetchForms();
+          }, remainingTime);
+          return () => clearTimeout(timeout);
+        } else {
+          localStorage.removeItem(SKIP_STORAGE_KEY);
+        }
+      }
+      fetchForms();
+    }
   }, [user]);
 
   const fetchForms = async () => {
@@ -88,6 +109,9 @@ export default function FeedbackFormUser() {
 
   const handleSkip = () => {
     setShowPopup(false);
+    // Store skip timestamp to show popup again after 1 hour
+    localStorage.setItem(SKIP_STORAGE_KEY, Date.now().toString());
+    
     // Move to next form if available
     const currentIndex = forms.findIndex(f => f.id === currentForm?.id);
     if (currentIndex < forms.length - 1) {

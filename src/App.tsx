@@ -27,9 +27,12 @@ import AdminNotifications from "@/pages/admin/AdminNotifications";
 import AdminVerifications from "@/pages/admin/AdminVerifications";
 import AdminFeedback from "@/pages/admin/AdminFeedback";
 import AdminAccessGrant from "@/pages/admin/AdminAccessGrant";
+import AdminMessages from "@/pages/admin/AdminMessages";
+import AdminTests from "@/pages/admin/AdminTests";
 import NotFound from "@/pages/NotFound";
 import VerifySuccess from "@/pages/VerifySuccess";
 import PremiumContent from "@/pages/PremiumContent";
+import GlobalAIHelper from "@/components/GlobalAIHelper";
 
 const queryClient = new QueryClient();
 
@@ -42,14 +45,14 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public routes with navbar */}
-            <Route path="/" element={<><Navbar /><Home /></>} />
-            <Route path="/batches" element={<><Navbar /><Batches /></>} />
+            <Route path="/" element={<><Navbar /><Home /><GlobalAIHelper /></>} />
+            <Route path="/batches" element={<><Navbar /><Batches /><GlobalAIHelper /></>} />
             <Route path="/batch/:id" element={<><Navbar /><BatchDetail /></>} />
-            <Route path="/today-live" element={<><Navbar /><TodayLive /></>} />
-            <Route path="/notifications" element={<><Navbar /><Notifications /></>} />
+            <Route path="/today-live" element={<><Navbar /><TodayLive /><GlobalAIHelper /></>} />
+            <Route path="/notifications" element={<><Navbar /><Notifications /><GlobalAIHelper /></>} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/verify-success" element={<VerifySuccess />} />
-            <Route path="/premium-content" element={<><Navbar /><PremiumContent /></>} />
+            <Route path="/premium-content" element={<><Navbar /><PremiumContent /><GlobalAIHelper /></>} />
             
             {/* Admin routes */}
             <Route path="/admin" element={<AdminLayout />}>
@@ -64,6 +67,8 @@ const App = () => (
               <Route path="verifications" element={<AdminVerifications />} />
               <Route path="feedback" element={<AdminFeedback />} />
               <Route path="access" element={<AdminAccessGrant />} />
+              <Route path="messages" element={<AdminMessages />} />
+              <Route path="tests" element={<AdminTests />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="sections" element={<AdminCustomSections />} />
               <Route path="media" element={<AdminMedia />} />

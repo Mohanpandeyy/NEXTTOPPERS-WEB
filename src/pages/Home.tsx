@@ -61,6 +61,20 @@ export default function Home() {
     },
   });
 
+  const { data: featuredBatches = [] } = useQuery({
+    queryKey: ['featured-batches'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('batches')
+        .select('*')
+        .eq('show_on_home', true)
+        .eq('visibility', 'public')
+        .limit(4);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers-home'],
     queryFn: async () => {
@@ -148,6 +162,26 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* Featured Batches - Show on Home */}
+      {featuredBatches.length > 0 && (
+        <section className="py-12 md:py-16 bg-gradient-to-b from-primary/5 to-transparent">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="text-3xl">⭐</span>
+              <h2 className="text-2xl md:text-3xl font-bold">Featured Courses</h2>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {featuredBatches.map((batch, i) => (
+                <div key={batch.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
+                  <BatchCard batch={batch} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Help Section */}
       <section className="py-8 bg-emerald-50 dark:bg-emerald-950/20">

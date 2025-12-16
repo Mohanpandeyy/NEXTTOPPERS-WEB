@@ -109,6 +109,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          show_on_home: boolean | null
           start_date: string | null
           status: Database["public"]["Enums"]["batch_status"]
           tags: string[] | null
@@ -122,6 +123,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          show_on_home?: boolean | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           tags?: string[] | null
@@ -135,6 +137,7 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          show_on_home?: boolean | null
           start_date?: string | null
           status?: Database["public"]["Enums"]["batch_status"]
           tags?: string[] | null
@@ -548,6 +551,33 @@ export type Database = {
           },
         ]
       }
+      personal_messages: {
+        Row: {
+          created_at: string | null
+          from_user_id: string
+          id: string
+          is_read: boolean | null
+          message: string
+          to_user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          from_user_id: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          to_user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          from_user_id?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          to_user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -649,6 +679,144 @@ export type Database = {
           subject?: string | null
         }
         Relationships: []
+      }
+      test_attempts: {
+        Row: {
+          answers: Json | null
+          id: string
+          score: number | null
+          started_at: string | null
+          submitted_at: string | null
+          test_id: string
+          total_questions: number | null
+          user_id: string
+        }
+        Insert: {
+          answers?: Json | null
+          id?: string
+          score?: number | null
+          started_at?: string | null
+          submitted_at?: string | null
+          test_id: string
+          total_questions?: number | null
+          user_id: string
+        }
+        Update: {
+          answers?: Json | null
+          id?: string
+          score?: number | null
+          started_at?: string | null
+          submitted_at?: string | null
+          test_id?: string
+          total_questions?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_attempts_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      test_questions: {
+        Row: {
+          correct_answer: string
+          created_at: string | null
+          explanation: string | null
+          id: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question: string
+          sort_order: number | null
+          test_id: string
+        }
+        Insert: {
+          correct_answer: string
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          option_a: string
+          option_b: string
+          option_c: string
+          option_d: string
+          question: string
+          sort_order?: number | null
+          test_id: string
+        }
+        Update: {
+          correct_answer?: string
+          created_at?: string | null
+          explanation?: string | null
+          id?: string
+          option_a?: string
+          option_b?: string
+          option_c?: string
+          option_d?: string
+          question?: string
+          sort_order?: number | null
+          test_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "test_questions_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tests: {
+        Row: {
+          batch_id: string | null
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          pdf_url: string | null
+          subject: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          pdf_url?: string | null
+          subject: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          pdf_url?: string | null
+          subject?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tests_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       timetable_entries: {
         Row: {
