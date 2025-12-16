@@ -65,7 +65,7 @@ export const VerificationFlow = ({ onAccessGranted }: VerificationFlowProps) => 
 
       setAccessGranted(true);
       setExpiresAt(data.expiresAt);
-      toast.success('Access granted for 36 hours!');
+      toast.success('Access granted for 24 hours!');
       onAccessGranted?.();
     } catch (error: any) {
       console.error('Confirm code error:', error);
@@ -83,7 +83,7 @@ export const VerificationFlow = ({ onAccessGranted }: VerificationFlowProps) => 
             <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
             <h3 className="text-xl font-semibold text-foreground mb-2">Access Granted!</h3>
             <p className="text-muted-foreground">
-              You have premium access for 36 hours.
+              You have premium access for 24 hours.
               {expiresAt && (
                 <span className="block mt-2 text-sm">
                   Expires: {new Date(expiresAt).toLocaleString()}
@@ -104,7 +104,7 @@ export const VerificationFlow = ({ onAccessGranted }: VerificationFlowProps) => 
           Unlock Premium Access
         </CardTitle>
         <CardDescription>
-          Complete verification to get 36 hours of premium access
+          Complete verification to get 24 hours of premium access
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
