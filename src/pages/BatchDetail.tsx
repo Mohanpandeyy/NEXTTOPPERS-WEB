@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play, Timer } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play, Timer, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import LectureCard from '@/components/cards/LectureCard';
 import PremiumAccessPopup from '@/components/PremiumAccessPopup';
+import AIHelper from '@/components/AIHelper';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
@@ -41,6 +42,7 @@ export default function BatchDetail() {
   const [showPremiumPopup, setShowPremiumPopup] = useState(false);
   const [accessMode, setAccessMode] = useState<'premium' | 'basic' | null>(null);
   const [countdown, setCountdown] = useState<string | null>(null);
+  const [showAIHelper, setShowAIHelper] = useState(false);
 
   // Redirect to auth if not logged in
   useEffect(() => {
@@ -707,6 +709,25 @@ export default function BatchDetail() {
         onStartBasic={handleStartBasic}
         hasBasicContent={hasBasicContent}
       />
+
+      {/* AI Helper Button */}
+      {!showAIHelper && (
+        <Button
+          onClick={() => setShowAIHelper(true)}
+          className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-xl z-40 gradient-primary"
+          size="icon"
+        >
+          <Sparkles className="w-6 h-6" />
+        </Button>
+      )}
+
+      {/* AI Helper */}
+      {showAIHelper && (
+        <AIHelper
+          lectureContext={batch?.name}
+          onClose={() => setShowAIHelper(false)}
+        />
+      )}
     </div>
   );
 }
