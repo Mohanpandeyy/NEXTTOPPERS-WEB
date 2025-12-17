@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Users, Award, Clock, Play, ChevronLeft, ChevronRight, Sparkles, Phone, Mail, MapPin } from 'lucide-react';
+import { ArrowRight, BookOpen, Users, Award, Clock, Play, ChevronLeft, ChevronRight, Sparkles, Mail, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import BatchCard from '@/components/cards/BatchCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -11,7 +12,6 @@ import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import FeedbackFormUser from '@/components/FeedbackFormUser';
 import { cn } from '@/lib/utils';
 
-// Sample banners (admin can customize later)
 const banners = [
   {
     id: 1,
@@ -38,8 +38,8 @@ export default function Home() {
   const { appName, logoUrl } = useAppSettings();
   const { user } = useSupabaseAuth();
   const [currentBanner, setCurrentBanner] = useState(0);
+  const [activeFilter, setActiveFilter] = useState('all');
   
-  // Auto-slide banners
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentBanner(prev => (prev + 1) % banners.length);
@@ -47,15 +47,14 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  const { data: batches = [] } = useQuery({
-    queryKey: ['public-batches'],
+  const { data: allBatches = [] } = useQuery({
+    queryKey: ['home-all-batches'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('batches')
         .select('*')
         .eq('visibility', 'public')
-        .order('created_at', { ascending: false })
-        .limit(8);
+        .order('created_at', { ascending: false });
       if (error) throw error;
       return data || [];
     },
@@ -75,18 +74,23 @@ export default function Home() {
     },
   });
 
-  const { data: teachers = [] } = useQuery({
-    queryKey: ['teachers-home'],
+  const { data: liveClasses = [] } = useQuery({
+    queryKey: ['upcoming-live'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('teachers')
+        .from('live_classes')
         .select('*')
-        .order('sort_order')
-        .limit(6);
+        .in('status', ['scheduled', 'live'])
+        .order('scheduled_time')
+        .limit(3);
       if (error) throw error;
       return data || [];
     },
   });
+
+  const filteredBatches = activeFilter === 'all' 
+    ? allBatches 
+    : allBatches.filter(b => b.status === activeFilter);
 
   const nextBanner = () => setCurrentBanner(prev => (prev + 1) % banners.length);
   const prevBanner = () => setCurrentBanner(prev => (prev - 1 + banners.length) % banners.length);
@@ -97,7 +101,7 @@ export default function Home() {
       
       {/* Hero Banner Carousel */}
       <section className="relative overflow-hidden">
-        <div className="relative h-[300px] md:h-[400px] lg:h-[450px]">
+        <div className="relative h-[280px] md:h-[380px] lg:h-[420px]">
           {banners.map((banner, index) => (
             <div
               key={banner.id}
@@ -115,14 +119,14 @@ export default function Home() {
               <div className="absolute inset-0 flex items-center">
                 <div className="container mx-auto px-4">
                   <div className="max-w-xl">
-                    <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 animate-fade-in">
+                    <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 animate-fade-in">
                       {banner.title}
                     </h1>
-                    <p className="text-lg md:text-xl text-white/80 mb-6">
+                    <p className="text-base md:text-lg text-white/80 mb-5">
                       {banner.subtitle}
                     </p>
                     <Link to="/batches">
-                      <Button size="lg" className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                      <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold">
                         Explore Courses
                         <ArrowRight className="w-5 h-5 ml-2" />
                       </Button>
@@ -133,21 +137,19 @@ export default function Home() {
             </div>
           ))}
           
-          {/* Navigation arrows */}
           <button
             onClick={prevBanner}
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
           >
-            <ChevronLeft className="w-6 h-6" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={nextBanner}
-            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
           >
-            <ChevronRight className="w-6 h-6" />
+            <ChevronRight className="w-5 h-5" />
           </button>
           
-          {/* Dots indicator */}
           <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
             {banners.map((_, index) => (
               <button
@@ -163,16 +165,67 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Featured Batches - Show on Home */}
-      {featuredBatches.length > 0 && (
-        <section className="py-12 md:py-16 bg-gradient-to-b from-primary/5 to-transparent">
+      {/* Live Classes Section */}
+      {liveClasses.length > 0 && (
+        <section className="py-6">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-3 mb-8">
-              <span className="text-3xl">⭐</span>
-              <h2 className="text-2xl md:text-3xl font-bold">Featured Courses</h2>
+            <div className="flex flex-col md:flex-row rounded-2xl overflow-hidden shadow-lg border">
+              <div className="bg-gradient-to-br from-cyan-500 to-teal-600 p-8 md:w-1/3 flex flex-col justify-center">
+                <div className="flex items-center gap-2 mb-2">
+                  <Radio className="w-6 h-6 text-white animate-pulse" />
+                  <span className="text-white/80 text-sm font-medium">LIVE</span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-white mb-2">LIVE CLASSES</h2>
+                <p className="text-white/80 text-sm">Join interactive sessions</p>
+              </div>
+              <div className="bg-card p-6 md:w-2/3 flex flex-col justify-center">
+                <h3 className="text-xl font-bold mb-2">Join Our Live Classes!</h3>
+                <p className="text-muted-foreground mb-4">
+                  Attend live interactive classes from our expert educators. Don't miss out!
+                </p>
+                <Link to="/today-live">
+                  <Button variant="outline" className="w-fit">
+                    Go to Live Page
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Struggling in Studies */}
+      <section className="py-4">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-card rounded-xl border shadow-sm">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <Sparkles className="w-7 h-7 text-emerald-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-bold">Struggling in Studies?</h3>
+                <p className="text-sm text-muted-foreground">Aaiye apki Samasya ka, Samadhan krte hai ✨</p>
+              </div>
+            </div>
+            <Link to="/batches">
+              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white whitespace-nowrap">
+                See How We Help
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Featured Batches */}
+      {featuredBatches.length > 0 && (
+        <section className="py-10 bg-gradient-to-b from-primary/5 to-transparent">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-2xl">⭐</span>
+              <h2 className="text-xl md:text-2xl font-bold">Featured Courses</h2>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {featuredBatches.map((batch, i) => (
                 <div key={batch.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.1}s` }}>
                   <BatchCard batch={batch} />
@@ -183,49 +236,50 @@ export default function Home() {
         </section>
       )}
 
-      {/* Help Section */}
-      <section className="py-8 bg-emerald-50 dark:bg-emerald-950/20">
+      {/* All Courses Section */}
+      <section className="py-10">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-6 bg-white dark:bg-card rounded-2xl shadow-sm border">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                <Sparkles className="w-8 h-8 text-emerald-600" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold">Struggling in Studies?</h3>
-                <p className="text-muted-foreground">Aaiye apki Samasya ka, Samadhan krte hai ✨</p>
-              </div>
-            </div>
-            <Link to="/batches">
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                See How We Help
+          <h2 className="text-xl md:text-2xl font-bold mb-4">All Courses</h2>
+          
+          {/* Filter Tabs */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            {['all', 'ongoing', 'upcoming', 'completed'].map((filter) => (
+              <Button
+                key={filter}
+                variant={activeFilter === filter ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setActiveFilter(filter)}
+                className={cn(
+                  "capitalize",
+                  activeFilter === filter && "bg-slate-800 text-white hover:bg-slate-700"
+                )}
+              >
+                {filter === 'all' ? 'All Courses' : filter}
               </Button>
-            </Link>
+            ))}
           </div>
-        </div>
-      </section>
 
-      {/* Trending Courses */}
-      {batches.length > 0 && (
-        <section className="py-12 md:py-16">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center gap-3 mb-8">
-              <span className="text-3xl">🔥</span>
-              <h2 className="text-2xl md:text-3xl font-bold">Trending Courses</h2>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {batches.map((batch, i) => (
-                <div 
-                  key={batch.id} 
-                  className="animate-fade-in"
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                >
+          <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+            We offer comprehensive courses covering all subjects with concept-based video lectures, 
+            live and recorded classes, doubt-solving sessions, and regular tests. Our platform emphasizes 
+            real-life examples, story-based teaching, and smart tricks to ensure deep understanding and exam readiness.
+          </p>
+          
+          {filteredBatches.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {filteredBatches.slice(0, 8).map((batch, i) => (
+                <div key={batch.id} className="animate-fade-in" style={{ animationDelay: `${i * 0.05}s` }}>
                   <BatchCard batch={batch} />
                 </div>
               ))}
             </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              No courses found for this filter
+            </div>
+          )}
 
+          {filteredBatches.length > 8 && (
             <div className="mt-8 text-center">
               <Link to="/batches">
                 <Button variant="outline" size="lg" className="group">
@@ -234,72 +288,30 @@ export default function Home() {
                 </Button>
               </Link>
             </div>
-          </div>
-        </section>
-      )}
-
-      {/* Our Teachers */}
-      {teachers.length > 0 && (
-        <section className="py-12 md:py-16 bg-secondary/30">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-10">
-              <h2 className="text-2xl md:text-3xl font-bold mb-2">Our Expert Teachers</h2>
-              <p className="text-muted-foreground">Learn from the best educators</p>
-            </div>
-            
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6">
-              {teachers.map((teacher, i) => (
-                <Card 
-                  key={teacher.id}
-                  className="text-center animate-fade-in overflow-hidden group"
-                  style={{ animationDelay: `${i * 0.1}s` }}
-                >
-                  <CardContent className="p-4">
-                    <div className="w-20 h-20 mx-auto mb-3 rounded-full overflow-hidden bg-muted">
-                      {teacher.photo_url ? (
-                        <img 
-                          src={teacher.photo_url} 
-                          alt={teacher.name}
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-primary/10 flex items-center justify-center">
-                          <Users className="w-8 h-8 text-primary" />
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-sm truncate">{teacher.name}</h3>
-                    {teacher.subject && (
-                      <p className="text-xs text-muted-foreground truncate">{teacher.subject}</p>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+          )}
+        </div>
+      </section>
 
       {/* Features Section */}
-      <section className="py-12 md:py-16">
+      <section className="py-10 bg-secondary/30">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-bold mb-2">Why Choose Us?</h2>
-            <p className="text-muted-foreground">Everything you need to succeed</p>
+          <div className="text-center mb-8">
+            <h2 className="text-xl md:text-2xl font-bold mb-2">Why Choose Us?</h2>
+            <p className="text-muted-foreground text-sm">Everything you need to succeed</p>
           </div>
           
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {features.map((feature, i) => (
               <Card 
                 key={feature.title}
-                className="text-center p-6 hover:shadow-lg transition-shadow animate-fade-in"
+                className="text-center p-5 hover:shadow-lg transition-shadow animate-fade-in"
                 style={{ animationDelay: `${i * 0.1}s` }}
               >
-                <div className="w-14 h-14 mx-auto mb-4 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <feature.icon className="w-7 h-7 text-primary" />
+                <div className="w-12 h-12 mx-auto mb-3 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <feature.icon className="w-6 h-6 text-primary" />
                 </div>
-                <h3 className="font-bold mb-1">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground">{feature.description}</p>
+                <h3 className="font-bold text-sm mb-1">{feature.title}</h3>
+                <p className="text-xs text-muted-foreground">{feature.description}</p>
               </Card>
             ))}
           </div>
@@ -307,15 +319,15 @@ export default function Home() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-12 md:py-16">
+      <section className="py-10">
         <div className="container mx-auto px-4">
-          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-primary to-primary/80 p-8 md:p-16 text-center text-primary-foreground">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary to-primary/80 p-8 md:p-12 text-center text-primary-foreground">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
             <div className="relative">
-              <h2 className="text-2xl md:text-4xl font-bold mb-4">
+              <h2 className="text-xl md:text-3xl font-bold mb-3">
                 Ready to Start Learning?
               </h2>
-              <p className="text-primary-foreground/80 mb-8 max-w-xl mx-auto">
+              <p className="text-primary-foreground/80 mb-6 max-w-xl mx-auto text-sm">
                 Join {appName} today and get access to the best learning resources
               </p>
               <Link to="/batches">
@@ -330,27 +342,27 @@ export default function Home() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-card border-t border-border py-10">
+      <footer className="bg-card border-t border-border py-8">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8 mb-8">
+          <div className="grid md:grid-cols-3 gap-6 mb-6">
             <div>
-              <div className="flex items-center gap-3 text-xl font-bold mb-4">
+              <div className="flex items-center gap-3 text-lg font-bold mb-3">
                 {logoUrl ? (
-                  <img src={logoUrl} alt={appName} className="w-10 h-10 rounded-xl object-cover" />
+                  <img src={logoUrl} alt={appName} className="w-9 h-9 rounded-xl object-cover" />
                 ) : (
-                  <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
                     <BookOpen className="w-5 h-5 text-primary-foreground" />
                   </div>
                 )}
                 <span>{appName}</span>
               </div>
               <p className="text-sm text-muted-foreground">
-                Your trusted partner for quality education and exam preparation.
+                Your trusted partner for quality education.
               </p>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <h4 className="font-semibold mb-3 text-sm">Quick Links</h4>
               <div className="space-y-2 text-sm">
                 <Link to="/batches" className="block text-muted-foreground hover:text-primary transition-colors">
                   All Courses
@@ -358,25 +370,20 @@ export default function Home() {
                 <Link to="/today-live" className="block text-muted-foreground hover:text-primary transition-colors">
                   Live Classes
                 </Link>
-                <Link to="/notifications" className="block text-muted-foreground hover:text-primary transition-colors">
-                  Notifications
-                </Link>
               </div>
             </div>
             
             <div>
-              <h4 className="font-semibold mb-4">Contact Us</h4>
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Mail className="w-4 h-4" />
-                  <span>support@{appName.toLowerCase().replace(/\s/g, '')}.com</span>
-                </div>
+              <h4 className="font-semibold mb-3 text-sm">Contact</h4>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Mail className="w-4 h-4" />
+                <span>support@{appName.toLowerCase().replace(/\s/g, '')}.com</span>
               </div>
             </div>
           </div>
           
-          <div className="border-t border-border pt-6 text-center">
-            <p className="text-sm text-muted-foreground">
+          <div className="border-t border-border pt-4 text-center">
+            <p className="text-xs text-muted-foreground">
               © {new Date().getFullYear()} {appName}. All rights reserved.
             </p>
           </div>
