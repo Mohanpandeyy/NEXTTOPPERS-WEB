@@ -1,12 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Crown, Sparkles, X, Star, Loader2, CheckCircle, Clock, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,11 +16,7 @@ interface PremiumAccessPopupProps {
 }
 
 export default function PremiumAccessPopup({
-  isOpen,
-  onClose,
-  onGetPremium,
-  onStartBasic,
-  hasBasicContent,
+  isOpen, onClose, onGetPremium, onStartBasic, hasBasicContent,
 }: PremiumAccessPopupProps) {
   const { user } = useSupabaseAuth();
   const [step, setStep] = useState<'choose' | 'verifying'>('choose');
@@ -34,29 +25,21 @@ export default function PremiumAccessPopup({
   const [accessGranted, setAccessGranted] = useState(false);
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
-      if (pollIntervalRef.current) {
-        clearInterval(pollIntervalRef.current);
-      }
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
   }, []);
 
   const checkAccessStatus = async () => {
     if (!user) return false;
-    
     const { data, error } = await supabase
       .from('ad_access')
       .select('*')
       .eq('user_id', user.id)
       .gt('expires_at', new Date().toISOString())
       .single();
-    
-    if (!error && data) {
-      return true;
-    }
-    return false;
+    return !error && data;
   };
 
   const handleGetPremium = async () => {
@@ -76,33 +59,28 @@ export default function PremiumAccessPopup({
       setShortLink(data.shortLink);
       setStep('verifying');
       
-      // Open AroLinks in new tab
+      // Open AroLinks - it will redirect back to our app after verification
       window.open(data.shortLink, '_blank');
       
       toast.success('Complete verification in the new tab');
 
-      // Start polling for access status
+      // Poll for access status
       pollIntervalRef.current = setInterval(async () => {
         const hasAccess = await checkAccessStatus();
         if (hasAccess) {
-          if (pollIntervalRef.current) {
-            clearInterval(pollIntervalRef.current);
-          }
+          if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
           setAccessGranted(true);
           toast.success('Premium access granted for 24 hours!');
-          
           setTimeout(() => {
             onGetPremium();
             onClose();
           }, 2000);
         }
-      }, 3000); // Check every 3 seconds
+      }, 2000);
 
       // Stop polling after 10 minutes
       setTimeout(() => {
-        if (pollIntervalRef.current) {
-          clearInterval(pollIntervalRef.current);
-        }
+        if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       }, 10 * 60 * 1000);
 
     } catch (error: any) {
@@ -114,9 +92,7 @@ export default function PremiumAccessPopup({
   };
 
   const handleClose = () => {
-    if (pollIntervalRef.current) {
-      clearInterval(pollIntervalRef.current);
-    }
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     setStep('choose');
     setShortLink(null);
     setAccessGranted(false);
@@ -130,9 +106,7 @@ export default function PremiumAccessPopup({
           <div className="text-center py-8">
             <CheckCircle className="w-20 h-20 mx-auto text-green-500 mb-4 animate-bounce" />
             <h3 className="text-2xl font-bold mb-2">🎉 Access Granted!</h3>
-            <p className="text-muted-foreground">
-              You have premium access for 24 hours. Enjoy learning!
-            </p>
+            <p className="text-muted-foreground">You have premium access for 24 hours. Enjoy learning!</p>
           </div>
         </DialogContent>
       </Dialog>
@@ -143,26 +117,19 @@ export default function PremiumAccessPopup({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-lg p-0 overflow-hidden border-0 bg-transparent shadow-none">
         <div className="relative bg-gradient-to-br from-card via-card to-muted/50 rounded-3xl border border-border/50 overflow-hidden shadow-2xl">
-          {/* Animated background */}
+          {/* Background effects */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute -top-32 -right-32 w-64 h-64 bg-gradient-to-br from-primary/30 to-purple-500/30 rounded-full blur-3xl animate-float" />
             <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-gradient-to-br from-accent/30 to-orange-500/30 rounded-full blur-3xl animate-float" style={{ animationDelay: '3s' }} />
           </div>
 
-          {/* Stars */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             {[...Array(6)].map((_, i) => (
-              <Star
-                key={i}
-                className="absolute text-primary/20 animate-pulse"
-                style={{
-                  width: `${8 + Math.random() * 12}px`,
-                  height: `${8 + Math.random() * 12}px`,
-                  top: `${10 + Math.random() * 80}%`,
-                  left: `${10 + Math.random() * 80}%`,
-                  animationDelay: `${i * 0.5}s`,
-                }}
-              />
+              <Star key={i} className="absolute text-primary/20 animate-pulse" style={{
+                width: `${8 + Math.random() * 12}px`, height: `${8 + Math.random() * 12}px`,
+                top: `${10 + Math.random() * 80}%`, left: `${10 + Math.random() * 80}%`,
+                animationDelay: `${i * 0.5}s`,
+              }} />
             ))}
           </div>
 
@@ -178,15 +145,12 @@ export default function PremiumAccessPopup({
                 {step === 'choose' ? 'Choose Your Access' : 'Verifying...'}
               </DialogTitle>
               <p className="text-muted-foreground mt-2">
-                {step === 'choose' 
-                  ? 'Unlock premium learning content' 
-                  : 'Complete verification in the new tab'}
+                {step === 'choose' ? 'Unlock premium learning content' : 'Complete verification in the new tab'}
               </p>
             </DialogHeader>
 
             {step === 'choose' ? (
               <div className="space-y-4">
-                {/* Premium Option */}
                 <button
                   className="w-full p-6 rounded-2xl border-2 border-primary bg-primary/10 hover:bg-primary/20 transition-all duration-300 text-left relative overflow-hidden group hover:scale-[1.02] shadow-lg"
                   onClick={handleGetPremium}
@@ -194,18 +158,12 @@ export default function PremiumAccessPopup({
                 >
                   <div className="relative flex items-start gap-4">
                     <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center shadow-lg">
-                      {isGenerating ? (
-                        <Loader2 className="w-7 h-7 text-white animate-spin" />
-                      ) : (
-                        <Crown className="w-7 h-7 text-white" />
-                      )}
+                      {isGenerating ? <Loader2 className="w-7 h-7 text-white animate-spin" /> : <Crown className="w-7 h-7 text-white" />}
                     </div>
                     <div className="flex-1">
                       <h3 className="font-bold text-xl mb-1 flex items-center gap-2 flex-wrap">
                         Get Premium
-                        <span className="text-xs bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full font-medium shadow-lg">
-                          24hr Access
-                        </span>
+                        <span className="text-xs bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full font-medium shadow-lg">24hr Access</span>
                       </h3>
                       <p className="text-sm text-muted-foreground leading-relaxed">
                         Complete quick verification to unlock <span className="text-primary font-medium">all content</span>
@@ -218,7 +176,6 @@ export default function PremiumAccessPopup({
                   </div>
                 </button>
 
-                {/* Basic Option */}
                 <button
                   className={cn(
                     'w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group hover:scale-[1.02]',
@@ -235,9 +192,7 @@ export default function PremiumAccessPopup({
                     <div className="flex-1">
                       <h3 className="font-bold text-xl mb-1">Start Basic</h3>
                       <p className="text-sm text-muted-foreground leading-relaxed">
-                        {hasBasicContent 
-                          ? 'Access free sample lectures to get started'
-                          : 'No basic content available for this batch'}
+                        {hasBasicContent ? 'Access free sample lectures to get started' : 'No basic content available for this batch'}
                       </p>
                     </div>
                   </div>
@@ -249,28 +204,19 @@ export default function PremiumAccessPopup({
                   <Loader2 className="w-16 h-16 mx-auto text-primary animate-spin mb-4" />
                   <p className="text-lg font-medium mb-2">Waiting for verification...</p>
                   <p className="text-sm text-muted-foreground mb-4">
-                    Complete the process in the new tab. Access will be granted automatically.
+                    Complete the process in the new tab. You'll be redirected back automatically.
                   </p>
-                  
                   {shortLink && (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => window.open(shortLink, '_blank')}
-                    >
+                    <Button variant="outline" className="w-full" onClick={() => window.open(shortLink, '_blank')}>
                       <ExternalLink className="w-4 h-4 mr-2" />
                       Open Verification Link Again
                     </Button>
                   )}
                 </div>
-
-                <Button variant="ghost" onClick={() => setStep('choose')} className="w-full">
-                  ← Back to Options
-                </Button>
+                <Button variant="ghost" onClick={() => setStep('choose')} className="w-full">← Back to Options</Button>
               </div>
             )}
 
-            {/* Close button */}
             <button
               onClick={handleClose}
               className="absolute top-4 right-4 w-10 h-10 rounded-full bg-muted/80 backdrop-blur-sm flex items-center justify-center hover:bg-muted transition-all duration-300 hover:scale-110 hover:rotate-90"
