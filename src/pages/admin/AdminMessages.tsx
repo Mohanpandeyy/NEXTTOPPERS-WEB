@@ -103,6 +103,7 @@ export default function AdminMessages() {
         from_user_id: userData.user.id,
         to_user_id: formData.to_user_id,
         message: formData.message.trim(),
+        is_admin_message: true,
       });
 
       if (error) throw error;
