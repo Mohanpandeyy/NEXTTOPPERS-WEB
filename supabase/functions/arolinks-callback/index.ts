@@ -7,7 +7,6 @@ const corsHeaders = {
 };
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -22,10 +21,7 @@ serve(async (req) => {
       console.error('Missing token in callback');
       return new Response(getErrorHTML('Missing verification token'), {
         status: 400,
-        headers: { 
-          'Content-Type': 'text/html; charset=utf-8',
-          ...corsHeaders 
-        },
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
       });
     }
 
@@ -44,72 +40,78 @@ serve(async (req) => {
 
     if (tokenError || !tokenData) {
       console.error('Token validation error:', tokenError);
-      return new Response(getErrorHTML('Invalid or expired token'), {
+      return new Response(getErrorHTML('Invalid or expired verification link'), {
         status: 400,
-        headers: { 
-          'Content-Type': 'text/html; charset=utf-8',
-          ...corsHeaders 
-        },
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
       });
     }
 
-    // Generate 6-digit code
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const codeExpiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString(); // 15 min expiry
+    console.log('Valid token found for user:', tokenData.user_id);
 
-    console.log('Generated code:', code, 'for token:', tokenData.id);
-
-    // Update token with code and status
+    // Mark token as used
     const { error: updateError } = await supabase
       .from('verification_tokens')
       .update({
-        code: code,
-        code_expires_at: codeExpiresAt,
-        status: 'code_generated'
+        used: true,
+        verified_at: new Date().toISOString(),
+        status: 'verified'
       })
       .eq('id', tokenData.id);
 
     if (updateError) {
-      console.error('Code update error:', updateError);
-      return new Response(getErrorHTML('Failed to generate code'), {
+      console.error('Token update error:', updateError);
+    }
+
+    // Grant 24-hour premium access
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+    // Delete any existing access for this user first
+    await supabase
+      .from('ad_access')
+      .delete()
+      .eq('user_id', tokenData.user_id);
+
+    // Insert new access
+    const { error: accessError } = await supabase
+      .from('ad_access')
+      .insert({
+        user_id: tokenData.user_id,
+        granted_at: new Date().toISOString(),
+        expires_at: expiresAt,
+      });
+
+    if (accessError) {
+      console.error('Access grant error:', accessError);
+      return new Response(getErrorHTML('Failed to grant access. Please try again.'), {
         status: 500,
-        headers: { 
-          'Content-Type': 'text/html; charset=utf-8',
-          ...corsHeaders 
-        },
+        headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
       });
     }
 
-    console.log('Successfully updated token with code');
+    console.log('Premium access granted until:', expiresAt);
 
-    // Return success page with code
-    return new Response(getSuccessHTML(code), {
+    // Return success page - access granted!
+    return new Response(getSuccessHTML(), {
       status: 200,
-      headers: { 
-        'Content-Type': 'text/html; charset=utf-8',
-        ...corsHeaders 
-      },
+      headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
     });
 
   } catch (error) {
     console.error('Callback error:', error);
     return new Response(getErrorHTML('Internal server error'), {
       status: 500,
-      headers: { 
-        'Content-Type': 'text/html; charset=utf-8',
-        ...corsHeaders 
-      },
+      headers: { 'Content-Type': 'text/html; charset=utf-8', ...corsHeaders },
     });
   }
 });
 
-function getSuccessHTML(code: string): string {
+function getSuccessHTML(): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Verification Code</title>
+  <title>Access Granted!</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -118,82 +120,105 @@ function getSuccessHTML(code: string): string {
       display: flex;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       padding: 20px;
     }
     .card {
       background: white;
-      border-radius: 16px;
-      padding: 40px;
+      border-radius: 20px;
+      padding: 48px 40px;
       text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      max-width: 400px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      max-width: 420px;
       width: 100%;
+      animation: slideUp 0.5s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
     }
     .icon {
-      width: 64px;
-      height: 64px;
+      width: 80px;
+      height: 80px;
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 24px;
+      animation: bounce 0.6s ease-out 0.3s;
     }
-    .icon svg { width: 32px; height: 32px; color: white; }
-    h1 { color: #1f2937; font-size: 24px; margin-bottom: 8px; }
-    p { color: #6b7280; margin-bottom: 24px; }
-    .code {
-      font-size: 48px;
+    @keyframes bounce {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+    }
+    .icon svg { width: 40px; height: 40px; color: white; }
+    h1 { 
+      color: #1f2937; 
+      font-size: 28px; 
+      margin-bottom: 12px;
       font-weight: 700;
-      letter-spacing: 8px;
-      color: #4f46e5;
-      background: #f3f4f6;
-      padding: 20px 32px;
-      border-radius: 12px;
+    }
+    .subtitle {
+      color: #059669;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    p { color: #6b7280; margin-bottom: 24px; line-height: 1.6; }
+    .badge {
+      display: inline-block;
+      background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+      color: #1f2937;
+      font-weight: 700;
+      padding: 12px 24px;
+      border-radius: 50px;
+      font-size: 16px;
       margin-bottom: 24px;
-      font-family: 'Courier New', monospace;
+      box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
     }
     .note {
       font-size: 14px;
       color: #9ca3af;
+      background: #f3f4f6;
+      padding: 16px;
+      border-radius: 12px;
     }
-    .copy-btn {
-      background: #4f46e5;
+    .close-btn {
+      background: #10b981;
       color: white;
       border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
+      padding: 14px 32px;
+      border-radius: 12px;
       font-size: 16px;
+      font-weight: 600;
       cursor: pointer;
-      margin-bottom: 16px;
-      transition: background 0.2s;
+      margin-top: 20px;
+      transition: all 0.2s;
     }
-    .copy-btn:hover { background: #4338ca; }
+    .close-btn:hover { 
+      background: #059669;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4);
+    }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="icon">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
       </svg>
     </div>
-    <h1>Verification Successful!</h1>
-    <p>Copy this code and enter it in the original tab:</p>
-    <div class="code" id="code">${code}</div>
-    <button class="copy-btn" onclick="copyCode()">Copy Code</button>
-    <p class="note">This code expires in 15 minutes.<br>You can close this tab after copying.</p>
+    <h1>🎉 Access Granted!</h1>
+    <div class="subtitle">Premium Unlocked</div>
+    <div class="badge">⏱️ 24 Hours Premium Access</div>
+    <p>You now have full access to all premium lectures, notes, and materials.</p>
+    <div class="note">
+      ✨ Go back to the app and refresh the page to start learning!
+    </div>
+    <button class="close-btn" onclick="window.close()">Close This Tab</button>
   </div>
-  <script>
-    function copyCode() {
-      navigator.clipboard.writeText('${code}');
-      document.querySelector('.copy-btn').textContent = 'Copied!';
-      setTimeout(() => {
-        document.querySelector('.copy-btn').textContent = 'Copy Code';
-      }, 2000);
-    }
-  </script>
 </body>
 </html>`;
 }
@@ -218,16 +243,16 @@ function getErrorHTML(message: string): string {
     }
     .card {
       background: white;
-      border-radius: 16px;
-      padding: 40px;
+      border-radius: 20px;
+      padding: 48px 40px;
       text-align: center;
-      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-      max-width: 400px;
+      box-shadow: 0 25px 80px rgba(0,0,0,0.3);
+      max-width: 420px;
       width: 100%;
     }
     .icon {
-      width: 64px;
-      height: 64px;
+      width: 80px;
+      height: 80px;
       background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
       border-radius: 50%;
       display: flex;
@@ -235,20 +260,34 @@ function getErrorHTML(message: string): string {
       justify-content: center;
       margin: 0 auto 24px;
     }
-    .icon svg { width: 32px; height: 32px; color: white; }
-    h1 { color: #1f2937; font-size: 24px; margin-bottom: 8px; }
-    p { color: #6b7280; }
+    .icon svg { width: 40px; height: 40px; color: white; }
+    h1 { color: #1f2937; font-size: 24px; margin-bottom: 12px; }
+    p { color: #6b7280; line-height: 1.6; }
+    .retry-btn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: all 0.2s;
+    }
+    .retry-btn:hover { background: #dc2626; }
   </style>
 </head>
 <body>
   <div class="card">
     <div class="icon">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
       </svg>
     </div>
     <h1>Verification Failed</h1>
     <p>${message}</p>
+    <button class="retry-btn" onclick="window.close()">Close Tab</button>
   </div>
 </body>
 </html>`;
