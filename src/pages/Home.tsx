@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, BookOpen, Users, Award, Clock, Play, ChevronLeft, ChevronRight, Sparkles, Mail, Radio } from 'lucide-react';
+import { ArrowRight, BookOpen, Users, Award, Clock, ChevronLeft, ChevronRight, Sparkles, Mail, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import BatchCard from '@/components/cards/BatchCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
@@ -11,21 +10,6 @@ import { useAppSettings } from '@/hooks/useAppSettings';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import FeedbackFormUser from '@/components/FeedbackFormUser';
 import { cn } from '@/lib/utils';
-
-const banners = [
-  {
-    id: 1,
-    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1600&h=400&fit=crop',
-    title: 'Start Your Learning Journey',
-    subtitle: 'Join thousands of successful students'
-  },
-  {
-    id: 2,
-    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?w=1600&h=400&fit=crop',
-    title: 'Expert Teachers',
-    subtitle: 'Learn from the best educators'
-  }
-];
 
 const features = [
   { icon: BookOpen, title: 'Quality Content', description: 'Well-structured courses' },
@@ -39,13 +23,28 @@ export default function Home() {
   const { user } = useSupabaseAuth();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [activeFilter, setActiveFilter] = useState('all');
+
+  // Fetch banners from database
+  const { data: banners = [] } = useQuery({
+    queryKey: ['home-banners'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('home_banners')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) throw error;
+      return data || [];
+    },
+  });
   
   useEffect(() => {
+    if (banners.length === 0) return;
     const interval = setInterval(() => {
       setCurrentBanner(prev => (prev + 1) % banners.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [banners.length]);
 
   const { data: allBatches = [] } = useQuery({
     queryKey: ['home-all-batches'],
@@ -100,70 +99,76 @@ export default function Home() {
       {user && <FeedbackFormUser />}
       
       {/* Hero Banner Carousel */}
-      <section className="relative overflow-hidden">
-        <div className="relative h-[280px] md:h-[380px] lg:h-[420px]">
-          {banners.map((banner, index) => (
-            <div
-              key={banner.id}
-              className={cn(
-                "absolute inset-0 transition-all duration-700 ease-in-out",
-                index === currentBanner ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
-              )}
-            >
-              <img
-                src={banner.image}
-                alt={banner.title}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
-              <div className="absolute inset-0 flex items-center">
-                <div className="container mx-auto px-4">
-                  <div className="max-w-xl">
-                    <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 animate-fade-in">
-                      {banner.title}
-                    </h1>
-                    <p className="text-base md:text-lg text-white/80 mb-5">
-                      {banner.subtitle}
-                    </p>
-                    <Link to="/batches">
-                      <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold">
-                        Explore Courses
-                        <ArrowRight className="w-5 h-5 ml-2" />
-                      </Button>
-                    </Link>
+      {banners.length > 0 && (
+        <section className="relative overflow-hidden">
+          <div className="relative h-[280px] md:h-[380px] lg:h-[420px]">
+            {banners.map((banner, index) => (
+              <div
+                key={banner.id}
+                className={cn(
+                  "absolute inset-0 transition-all duration-700 ease-in-out",
+                  index === currentBanner ? "opacity-100 translate-x-0" : "opacity-0 translate-x-full"
+                )}
+              >
+                <img
+                  src={banner.image_url}
+                  alt={banner.title}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+                <div className="absolute inset-0 flex items-center">
+                  <div className="container mx-auto px-4">
+                    <div className="max-w-xl">
+                      <h1 className="text-2xl md:text-4xl lg:text-5xl font-bold text-white mb-3 animate-fade-in">
+                        {banner.title}
+                      </h1>
+                      <p className="text-base md:text-lg text-white/80 mb-5">
+                        {banner.subtitle}
+                      </p>
+                      <Link to={banner.link_url || '/batches'}>
+                        <Button size="lg" className="bg-orange-500 hover:bg-orange-600 text-white font-semibold">
+                          Explore Courses
+                          <ArrowRight className="w-5 h-5 ml-2" />
+                        </Button>
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
-          
-          <button
-            onClick={prevBanner}
-            className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button
-            onClick={nextBanner}
-            className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-            {banners.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentBanner(index)}
-                className={cn(
-                  "w-2 h-2 rounded-full transition-all",
-                  index === currentBanner ? "bg-white w-6" : "bg-white/50"
-                )}
-              />
             ))}
+            
+            {banners.length > 1 && (
+              <>
+                <button
+                  onClick={prevBanner}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={nextBanner}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+                
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  {banners.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentBanner(index)}
+                      className={cn(
+                        "w-2 h-2 rounded-full transition-all",
+                        index === currentBanner ? "bg-white w-6" : "bg-white/50"
+                      )}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Live Classes Section */}
       {liveClasses.length > 0 && (

@@ -1,11 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, BookOpen, Radio, Bell, Menu, X, LogIn, LogOut } from 'lucide-react';
+import { Home, BookOpen, Radio, Bell, Menu, X, LogIn, LogOut, Sparkles, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { useAppSettings } from '@/hooks/useAppSettings';
 import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
+import AIHelper from '@/components/AIHelper';
 
 const navLinks = [
   { href: '/', label: 'Home', icon: Home },
@@ -21,8 +26,23 @@ export default function Navbar() {
   const { appName, logoUrl } = useAppSettings();
   const { unreadCount, requestPermission } = useNotifications();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [showAIHelper, setShowAIHelper] = useState(false);
 
-  // Request notification permission when user logs in
+  // Fetch user profile
+  const { data: profile } = useQuery({
+    queryKey: ['user-profile', user?.id],
+    queryFn: async () => {
+      if (!user) return null;
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      return data;
+    },
+    enabled: !!user,
+  });
+
   useEffect(() => {
     if (user) {
       requestPermission();
@@ -97,6 +117,17 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="hidden md:flex items-center gap-3">
+            {user && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowAIHelper(true)}
+                className="rounded-xl hover:bg-purple-500/10"
+                title="AI Helper"
+              >
+                <Sparkles className="w-5 h-5 text-purple-500" />
+              </Button>
+            )}
             {user ? (
               <>
                 {isAdmin && (
@@ -106,10 +137,29 @@ export default function Navbar() {
                     </Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="sm" onClick={handleLogout} className="rounded-xl hover:bg-destructive/10 hover:text-destructive transition-all duration-300">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="rounded-full">
+                      <Avatar className="w-8 h-8">
+                        <AvatarImage src={profile?.avatar_url} />
+                        <AvatarFallback>
+                          {profile?.name?.charAt(0)?.toUpperCase() || user.email?.charAt(0)?.toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem onClick={() => navigate('/profile')}>
+                      <User className="w-4 h-4 mr-2" />
+                      My Profile
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout} className="text-destructive">
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             ) : (
               <Link to="/auth">
@@ -213,6 +263,10 @@ export default function Navbar() {
           </div>
         )}
       </div>
+      {/* AI Helper */}
+      {showAIHelper && (
+        <AIHelper onClose={() => setShowAIHelper(false)} />
+      )}
     </nav>
   );
 }
