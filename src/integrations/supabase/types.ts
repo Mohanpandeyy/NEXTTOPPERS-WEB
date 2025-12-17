@@ -336,6 +336,39 @@ export type Database = {
           },
         ]
       }
+      home_banners: {
+        Row: {
+          created_at: string | null
+          id: string
+          image_url: string
+          is_active: boolean | null
+          link_url: string | null
+          sort_order: number | null
+          subtitle: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean | null
+          link_url?: string | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean | null
+          link_url?: string | null
+          sort_order?: number | null
+          subtitle?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       lectures: {
         Row: {
           batch_id: string

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play, Timer, Sparkles } from 'lucide-react';
+import { Calendar, Users, ArrowLeft, Clock, FileText, Download, Lock, BookOpen, ChevronRight, Play, Timer, Sparkles, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,6 +14,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+
+interface Test {
+  id: string;
+  title: string;
+  subject: string;
+  description: string | null;
+  duration_minutes: number | null;
+  is_active: boolean;
+}
 
 const statusColors = {
   ongoing: 'bg-green-500/10 text-green-600 border-green-500/20',
@@ -107,7 +116,21 @@ export default function BatchDetail() {
     enabled: !!id && !!user,
   });
 
-  // Fetch timetable
+  // Fetch tests for this batch
+  const { data: tests = [] } = useQuery({
+    queryKey: ['batch-tests', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('tests')
+        .select('*')
+        .eq('batch_id', id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data as Test[];
+    },
+    enabled: !!id && !!user,
+  });
   const { data: timetable } = useQuery({
     queryKey: ['timetable', id],
     queryFn: async () => {
@@ -449,6 +472,7 @@ export default function BatchDetail() {
         <Tabs defaultValue="lectures" className="space-y-6" onValueChange={() => setSelectedSubject(null)}>
           <TabsList className="w-full overflow-x-auto flex justify-start gap-1 h-auto p-1">
             <TabsTrigger value="lectures" className="text-sm">Lectures</TabsTrigger>
+            <TabsTrigger value="tests" className="text-sm">Tests</TabsTrigger>
             <TabsTrigger value="notes" className="text-sm">Notes</TabsTrigger>
             <TabsTrigger value="dpp" className="text-sm">DPP</TabsTrigger>
             <TabsTrigger value="timetable" className="text-sm">Timetable</TabsTrigger>
@@ -458,6 +482,83 @@ export default function BatchDetail() {
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {/* Tests Tab */}
+          <TabsContent value="tests" className="space-y-4">
+            {(() => {
+              const testSubjects = [...new Set(tests.map(t => t.subject))];
+              const filteredTests = selectedSubject 
+                ? tests.filter(t => t.subject === selectedSubject) 
+                : tests;
+
+              if (!selectedSubject && testSubjects.length > 0) {
+                return (
+                  <>
+                    <h3 className="font-semibold text-lg">Select Subject</h3>
+                    <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {testSubjects.map(subject => {
+                        const count = tests.filter(t => t.subject === subject).length;
+                        return (
+                          <SubjectCard 
+                            key={subject} 
+                            subject={subject} 
+                            count={count} 
+                            icon={<ClipboardList className="w-5 h-5 text-purple-500" />} 
+                          />
+                        );
+                      })}
+                    </div>
+                  </>
+                );
+              }
+
+              return (
+                <>
+                  {selectedSubject && <BackToSubjects />}
+                  <h3 className="font-semibold text-lg mb-4">
+                    {selectedSubject ? `${selectedSubject} - Tests` : 'All Tests'}
+                  </h3>
+                  {filteredTests.length === 0 ? (
+                    <p className="text-muted-foreground text-center py-8">No tests available</p>
+                  ) : (
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      {filteredTests.map((test) => (
+                        <Card key={test.id} className="hover:border-primary/30 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                                  <ClipboardList className="w-5 h-5 text-purple-500" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold">{test.title}</p>
+                                  <p className="text-sm text-muted-foreground">{test.subject}</p>
+                                </div>
+                              </div>
+                            </div>
+                            {test.description && (
+                              <p className="text-sm text-muted-foreground mb-3">{test.description}</p>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <Clock className="w-4 h-4" />
+                                <span>{test.duration_minutes || 60} mins</span>
+                              </div>
+                              <Link to={`/test/${test.id}`}>
+                                <Button size="sm" disabled={!hasAccess && !hasBasicAccess}>
+                                  Start Test
+                                </Button>
+                              </Link>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </TabsContent>
 
           {/* Lectures Tab */}
           <TabsContent value="lectures" className="space-y-4">

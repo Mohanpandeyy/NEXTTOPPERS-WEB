@@ -10,10 +10,12 @@ import Batches from "@/pages/Batches";
 import BatchDetail from "@/pages/BatchDetail";
 import TodayLive from "@/pages/TodayLive";
 import Notifications from "@/pages/Notifications";
+import Profile from "@/pages/Profile";
 import Auth from "@/pages/Auth";
 import AdminLayout from "@/pages/admin/AdminLayout";
 import Dashboard from "@/pages/admin/Dashboard";
 import AdminBatches from "@/pages/admin/AdminBatches";
+import AdminBanners from "@/pages/admin/AdminBanners";
 import AdminSubjects from "@/pages/admin/AdminSubjects";
 import AdminTeachers from "@/pages/admin/AdminTeachers";
 import AdminLectures from "@/pages/admin/AdminLectures";
@@ -34,7 +36,6 @@ import TestTaking from "@/pages/TestTaking";
 import NotFound from "@/pages/NotFound";
 import VerifySuccess from "@/pages/VerifySuccess";
 import PremiumContent from "@/pages/PremiumContent";
-import GlobalAIHelper from "@/components/GlobalAIHelper";
 import PersonalMessagePopup from "@/components/PersonalMessagePopup";
 
 const queryClient = new QueryClient();
@@ -48,20 +49,21 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public routes with navbar */}
-            <Route path="/" element={<><Navbar /><Home /><GlobalAIHelper /><PersonalMessagePopup /></>} />
-            <Route path="/batches" element={<><Navbar /><Batches /><GlobalAIHelper /><PersonalMessagePopup /></>} />
+            <Route path="/" element={<><Navbar /><Home /><PersonalMessagePopup /></>} />
+            <Route path="/batches" element={<><Navbar /><Batches /><PersonalMessagePopup /></>} />
             <Route path="/batch/:id" element={<><Navbar /><BatchDetail /><PersonalMessagePopup /></>} />
-            <Route path="/today-live" element={<><Navbar /><TodayLive /><GlobalAIHelper /><PersonalMessagePopup /></>} />
-            <Route path="/notifications" element={<><Navbar /><Notifications /><GlobalAIHelper /><PersonalMessagePopup /></>} />
+            <Route path="/today-live" element={<><Navbar /><TodayLive /><PersonalMessagePopup /></>} />
+            <Route path="/notifications" element={<><Navbar /><Notifications /><PersonalMessagePopup /></>} />
+            <Route path="/profile" element={<><Navbar /><Profile /><PersonalMessagePopup /></>} />
             <Route path="/test/:testId" element={<><Navbar /><TestTaking /></>} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/verify-success" element={<VerifySuccess />} />
-            <Route path="/premium-content" element={<><Navbar /><PremiumContent /><GlobalAIHelper /><PersonalMessagePopup /></>} />
+            <Route path="/premium-content" element={<><Navbar /><PremiumContent /><PersonalMessagePopup /></>} />
             
-            {/* Admin routes */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="batches" element={<AdminBatches />} />
+              <Route path="banners" element={<AdminBanners />} />
               <Route path="subjects" element={<AdminSubjects />} />
               <Route path="teachers" element={<AdminTeachers />} />
               <Route path="lectures" element={<AdminLectures />} />
