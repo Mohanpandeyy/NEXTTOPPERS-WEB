@@ -1,6 +1,7 @@
 import { Navigate, Outlet, Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap, FolderPlus, Layers, Radio, Bell, Key, MessageSquare, UserCheck, Shield } from 'lucide-react';
+import { LayoutDashboard, BookOpen, Video, Calendar, Users, Image, Settings, LogOut, GraduationCap, FolderPlus, Layers, Radio, Bell, Key, MessageSquare, UserCheck, Shield, Trash2 } from 'lucide-react';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { useAppSettings } from '@/hooks/useAppSettings';
 import { cn } from '@/lib/utils';
 
 const sidebarLinks = [
@@ -19,12 +20,14 @@ const sidebarLinks = [
   { href: '/admin/verifications', label: 'Verifications', icon: Key },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/sections', label: 'Custom Sections', icon: FolderPlus },
+  { href: '/admin/recycle-bin', label: 'Recycle Bin', icon: Trash2 },
   { href: '/admin/media', label: 'Media', icon: Image },
   { href: '/admin/settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminLayout() {
   const { isAdmin, isLoading, signOut } = useSupabaseAuth();
+  const { appName, logoUrl } = useAppSettings();
   const location = useLocation();
 
   if (isLoading) {
@@ -45,10 +48,14 @@ export default function AdminLayout() {
       <aside className="w-64 bg-sidebar text-sidebar-foreground flex-shrink-0 hidden md:flex flex-col">
         <div className="p-4 border-b border-sidebar-border">
           <Link to="/" className="flex items-center gap-2 text-xl font-bold">
-            <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <GraduationCap className="w-5 h-5 text-sidebar-primary-foreground" />
-            </div>
-            EduMaster
+            {logoUrl ? (
+              <img src={logoUrl} alt={appName} className="w-8 h-8 rounded-lg object-cover" />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
+                <GraduationCap className="w-5 h-5 text-sidebar-primary-foreground" />
+              </div>
+            )}
+            {appName}
           </Link>
         </div>
         

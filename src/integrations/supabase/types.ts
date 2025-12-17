@@ -556,27 +556,41 @@ export type Database = {
           created_at: string | null
           from_user_id: string
           id: string
+          is_admin_message: boolean | null
           is_read: boolean | null
           message: string
+          reply_to_id: string | null
           to_user_id: string
         }
         Insert: {
           created_at?: string | null
           from_user_id: string
           id?: string
+          is_admin_message?: boolean | null
           is_read?: boolean | null
           message: string
+          reply_to_id?: string | null
           to_user_id: string
         }
         Update: {
           created_at?: string | null
           from_user_id?: string
           id?: string
+          is_admin_message?: boolean | null
           is_read?: boolean | null
           message?: string
+          reply_to_id?: string | null
           to_user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "personal_messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "personal_messages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -623,6 +637,36 @@ export type Database = {
           created_at?: string
           email?: string
           id?: string
+        }
+        Relationships: []
+      }
+      recycle_bin: {
+        Row: {
+          data: Json
+          deleted_at: string
+          deleted_by: string | null
+          id: string
+          original_id: string
+          original_table: string
+          permanent_delete_at: string
+        }
+        Insert: {
+          data: Json
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          original_id: string
+          original_table: string
+          permanent_delete_at?: string
+        }
+        Update: {
+          data?: Json
+          deleted_at?: string
+          deleted_by?: string | null
+          id?: string
+          original_id?: string
+          original_table?: string
+          permanent_delete_at?: string
         }
         Relationships: []
       }
@@ -728,10 +772,15 @@ export type Database = {
           explanation: string | null
           id: string
           option_a: string
+          option_a_image_url: string | null
           option_b: string
+          option_b_image_url: string | null
           option_c: string
+          option_c_image_url: string | null
           option_d: string
+          option_d_image_url: string | null
           question: string
+          question_image_url: string | null
           sort_order: number | null
           test_id: string
         }
@@ -741,10 +790,15 @@ export type Database = {
           explanation?: string | null
           id?: string
           option_a: string
+          option_a_image_url?: string | null
           option_b: string
+          option_b_image_url?: string | null
           option_c: string
+          option_c_image_url?: string | null
           option_d: string
+          option_d_image_url?: string | null
           question: string
+          question_image_url?: string | null
           sort_order?: number | null
           test_id: string
         }
@@ -754,10 +808,15 @@ export type Database = {
           explanation?: string | null
           id?: string
           option_a?: string
+          option_a_image_url?: string | null
           option_b?: string
+          option_b_image_url?: string | null
           option_c?: string
+          option_c_image_url?: string | null
           option_d?: string
+          option_d_image_url?: string | null
           question?: string
+          question_image_url?: string | null
           sort_order?: number | null
           test_id?: string
         }
@@ -966,6 +1025,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      cleanup_recycle_bin: { Args: never; Returns: undefined }
       delete_old_notifications: { Args: never; Returns: undefined }
       has_role: {
         Args: {

@@ -29,10 +29,13 @@ import AdminFeedback from "@/pages/admin/AdminFeedback";
 import AdminAccessGrant from "@/pages/admin/AdminAccessGrant";
 import AdminMessages from "@/pages/admin/AdminMessages";
 import AdminTests from "@/pages/admin/AdminTests";
+import AdminRecycleBin from "@/pages/admin/AdminRecycleBin";
+import TestTaking from "@/pages/TestTaking";
 import NotFound from "@/pages/NotFound";
 import VerifySuccess from "@/pages/VerifySuccess";
 import PremiumContent from "@/pages/PremiumContent";
 import GlobalAIHelper from "@/components/GlobalAIHelper";
+import PersonalMessagePopup from "@/components/PersonalMessagePopup";
 
 const queryClient = new QueryClient();
 
@@ -45,14 +48,15 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             {/* Public routes with navbar */}
-            <Route path="/" element={<><Navbar /><Home /><GlobalAIHelper /></>} />
-            <Route path="/batches" element={<><Navbar /><Batches /><GlobalAIHelper /></>} />
-            <Route path="/batch/:id" element={<><Navbar /><BatchDetail /></>} />
-            <Route path="/today-live" element={<><Navbar /><TodayLive /><GlobalAIHelper /></>} />
-            <Route path="/notifications" element={<><Navbar /><Notifications /><GlobalAIHelper /></>} />
+            <Route path="/" element={<><Navbar /><Home /><GlobalAIHelper /><PersonalMessagePopup /></>} />
+            <Route path="/batches" element={<><Navbar /><Batches /><GlobalAIHelper /><PersonalMessagePopup /></>} />
+            <Route path="/batch/:id" element={<><Navbar /><BatchDetail /><PersonalMessagePopup /></>} />
+            <Route path="/today-live" element={<><Navbar /><TodayLive /><GlobalAIHelper /><PersonalMessagePopup /></>} />
+            <Route path="/notifications" element={<><Navbar /><Notifications /><GlobalAIHelper /><PersonalMessagePopup /></>} />
+            <Route path="/test/:testId" element={<><Navbar /><TestTaking /></>} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/verify-success" element={<VerifySuccess />} />
-            <Route path="/premium-content" element={<><Navbar /><PremiumContent /><GlobalAIHelper /></>} />
+            <Route path="/premium-content" element={<><Navbar /><PremiumContent /><GlobalAIHelper /><PersonalMessagePopup /></>} />
             
             {/* Admin routes */}
             <Route path="/admin" element={<AdminLayout />}>
@@ -71,6 +75,7 @@ const App = () => (
               <Route path="tests" element={<AdminTests />} />
               <Route path="users" element={<AdminUsersNew />} />
               <Route path="sections" element={<AdminCustomSections />} />
+              <Route path="recycle-bin" element={<AdminRecycleBin />} />
               <Route path="media" element={<AdminMedia />} />
               <Route path="settings" element={<AdminSettings />} />
             </Route>

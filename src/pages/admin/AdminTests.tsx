@@ -28,9 +28,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit2, Trash2, FileText, Clock, ListChecks, Upload } from 'lucide-react';
+import { Plus, Edit2, Trash2, FileText, Clock, ListChecks, Upload, Image, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Test {
   id: string;
@@ -48,10 +49,15 @@ interface TestQuestion {
   id?: string;
   test_id?: string;
   question: string;
+  question_image_url?: string;
   option_a: string;
+  option_a_image_url?: string;
   option_b: string;
+  option_b_image_url?: string;
   option_c: string;
+  option_c_image_url?: string;
   option_d: string;
+  option_d_image_url?: string;
   correct_answer: string;
   explanation: string;
   sort_order: number;
@@ -78,6 +84,7 @@ export default function AdminTests() {
   const [editingTest, setEditingTest] = useState<Test | null>(null);
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null);
   const [questions, setQuestions] = useState<TestQuestion[]>([]);
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     batch_id: '',
@@ -91,10 +98,15 @@ export default function AdminTests() {
 
   const [newQuestion, setNewQuestion] = useState<TestQuestion>({
     question: '',
+    question_image_url: '',
     option_a: '',
+    option_a_image_url: '',
     option_b: '',
+    option_b_image_url: '',
     option_c: '',
+    option_c_image_url: '',
     option_d: '',
+    option_d_image_url: '',
     correct_answer: 'A',
     explanation: '',
     sort_order: 0,
@@ -170,16 +182,51 @@ export default function AdminTests() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this test?')) return;
+    if (!confirm('Move this test to recycle bin?')) return;
 
     try {
+      // Get test data first
+      const { data: testData } = await supabase.from('tests').select('*').eq('id', id).single();
+      
+      // Move to recycle bin
+      const { data: userData } = await supabase.auth.getUser();
+      await supabase.from('recycle_bin').insert({
+        original_table: 'tests',
+        original_id: id,
+        data: testData,
+        deleted_by: userData.user?.id,
+      });
+
+      // Delete test
       const { error } = await supabase.from('tests').delete().eq('id', id);
       if (error) throw error;
-      toast({ title: 'Success', description: 'Test deleted successfully' });
+      toast({ title: 'Success', description: 'Test moved to recycle bin (48h retention)' });
       fetchData();
     } catch (error) {
       console.error('Error deleting test:', error);
       toast({ title: 'Error', description: 'Failed to delete test', variant: 'destructive' });
+    }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: string) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(field);
+    try {
+      const fileName = `test-images/${Date.now()}-${file.name}`;
+      const { error: uploadError } = await supabase.storage.from('media').upload(fileName, file);
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage.from('media').getPublicUrl(fileName);
+      
+      setNewQuestion(prev => ({ ...prev, [field]: publicUrl }));
+      toast({ title: 'Success', description: 'Image uploaded' });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: 'Error', description: 'Failed to upload image', variant: 'destructive' });
+    } finally {
+      setUploadingImage(null);
     }
   };
 
@@ -200,10 +247,15 @@ export default function AdminTests() {
       toast({ title: 'Success', description: 'Question added' });
       setNewQuestion({
         question: '',
+        question_image_url: '',
         option_a: '',
+        option_a_image_url: '',
         option_b: '',
+        option_b_image_url: '',
         option_c: '',
+        option_c_image_url: '',
         option_d: '',
+        option_d_image_url: '',
         correct_answer: 'A',
         explanation: '',
         sort_order: 0,
@@ -277,120 +329,213 @@ export default function AdminTests() {
     setIsQuestionsOpen(true);
   };
 
+  const ImageUploadField = ({ label, field, value }: { label: string; field: string; value?: string }) => (
+    <div className="space-y-2">
+      <Label className="text-xs text-muted-foreground">{label} Image (Optional)</Label>
+      <div className="flex items-center gap-2">
+        <Input
+          type="file"
+          accept="image/*"
+          onChange={(e) => handleImageUpload(e, field)}
+          className="text-xs"
+          disabled={uploadingImage === field}
+        />
+        {uploadingImage === field && (
+          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+        )}
+      </div>
+      {value && (
+        <img src={value} alt="Preview" className="h-16 w-16 object-cover rounded border" />
+      )}
+    </div>
+  );
+
   if (isLoading) {
     return (
-      <div className="p-6 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="p-6 flex items-center justify-center min-h-screen">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full"
+        />
       </div>
     );
   }
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+      >
         <div>
-          <h1 className="text-2xl font-bold">Tests & MCQ</h1>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary animate-pulse" />
+            Tests & MCQ
+          </h1>
           <p className="text-sm text-muted-foreground">Create and manage tests with MCQ questions</p>
         </div>
-        <Button onClick={() => setIsFormOpen(true)} className="gradient-primary">
-          <Plus className="w-4 h-4 mr-2" />
+        <Button onClick={() => setIsFormOpen(true)} className="gradient-primary group">
+          <Plus className="w-4 h-4 mr-2 group-hover:rotate-90 transition-transform" />
           Create Test
         </Button>
-      </div>
+      </motion.div>
 
-      {/* Stats */}
+      {/* Animated Stats */}
       <div className="grid sm:grid-cols-2 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <FileText className="w-5 h-5 text-primary" />
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+          <Card className="overflow-hidden relative group hover:shadow-lg transition-shadow">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-primary/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <motion.div 
+                  whileHover={{ scale: 1.1, rotate: 5 }}
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/50 flex items-center justify-center shadow-lg"
+                >
+                  <FileText className="w-6 h-6 text-white" />
+                </motion.div>
+                <div>
+                  <motion.p 
+                    key={tests.length}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent"
+                  >
+                    {tests.length}
+                  </motion.p>
+                  <p className="text-sm text-muted-foreground">Total Tests</p>
+                </div>
               </div>
-              <div>
-                <p className="text-2xl font-bold">{tests.length}</p>
-                <p className="text-sm text-muted-foreground">Total Tests</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.2 }}>
+          <Card className="overflow-hidden relative group hover:shadow-lg transition-shadow">
+            <div className="absolute inset-0 bg-gradient-to-r from-green-500/5 to-green-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <motion.div 
+                  whileHover={{ scale: 1.1, rotate: -5 }}
+                  className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-500/50 flex items-center justify-center shadow-lg"
+                >
+                  <ListChecks className="w-6 h-6 text-white" />
+                </motion.div>
+                <div>
+                  <motion.p 
+                    key={tests.filter(t => t.is_active).length}
+                    initial={{ scale: 1.2 }}
+                    animate={{ scale: 1 }}
+                    className="text-3xl font-bold text-green-600"
+                  >
+                    {tests.filter(t => t.is_active).length}
+                  </motion.p>
+                  <p className="text-sm text-muted-foreground">Active Tests</p>
+                </div>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <ListChecks className="w-5 h-5 text-green-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{tests.filter(t => t.is_active).length}</p>
-                <p className="text-sm text-muted-foreground">Active Tests</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
-      {/* Tests Table */}
-      <Card>
-        <CardHeader>
-          <CardTitle>All Tests</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {tests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <FileText className="w-12 h-12 mx-auto mb-4 opacity-20" />
-              <p>No tests created yet</p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Duration</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {tests.map((test) => (
-                  <TableRow key={test.id}>
-                    <TableCell className="font-medium">{test.title}</TableCell>
-                    <TableCell>{test.subject}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        <Clock className="w-3 h-3 mr-1" />
-                        {test.duration_minutes} min
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={test.is_active ? "default" : "secondary"}>
-                        {test.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => openQuestions(test.id)}>
-                        <ListChecks className="w-4 h-4 mr-1" />
-                        Questions
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(test)}>
-                        <Edit2 className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleDelete(test.id)} className="text-destructive">
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Tests Grid */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+        <Card className="overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-muted/50 to-muted/30">
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              All Tests
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {tests.length === 0 ? (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16 text-muted-foreground"
+              >
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 2, repeat: Infinity }}
+                >
+                  <FileText className="w-16 h-16 mx-auto mb-4 opacity-20" />
+                </motion.div>
+                <p className="text-lg">No tests created yet</p>
+                <p className="text-sm">Click "Create Test" to get started</p>
+              </motion.div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/30">
+                      <TableHead>Title</TableHead>
+                      <TableHead>Subject</TableHead>
+                      <TableHead>Duration</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <AnimatePresence>
+                      {tests.map((test, index) => (
+                        <motion.tr
+                          key={test.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={{ opacity: 0, x: 20 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="group hover:bg-muted/50 transition-colors"
+                        >
+                          <TableCell className="font-medium">{test.title}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="bg-primary/5">
+                              {test.subject}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="gap-1">
+                              <Clock className="w-3 h-3" />
+                              {test.duration_minutes} min
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={test.is_active ? "default" : "secondary"} className={test.is_active ? "bg-green-500" : ""}>
+                              {test.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                              <Button variant="outline" size="sm" onClick={() => openQuestions(test.id)} className="gap-1">
+                                <ListChecks className="w-4 h-4" />
+                                Questions
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => openEdit(test)}>
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => handleDelete(test.id)} className="text-destructive hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </motion.tr>
+                      ))}
+                    </AnimatePresence>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Create/Edit Test Dialog */}
       <Dialog open={isFormOpen} onOpenChange={(open) => !open && resetForm()}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editingTest ? 'Edit Test' : 'Create New Test'}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-primary" />
+              {editingTest ? 'Edit Test' : 'Create New Test'}
+            </DialogTitle>
           </DialogHeader>
           
           <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto">
@@ -451,13 +596,7 @@ export default function AdminTests() {
 
             <div className="space-y-2">
               <Label>PDF Upload (Optional)</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="file"
-                  accept=".pdf"
-                  onChange={handlePdfUpload}
-                />
-              </div>
+              <Input type="file" accept=".pdf" onChange={handlePdfUpload} />
               {formData.pdf_url && (
                 <a href={formData.pdf_url} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline">
                   View uploaded PDF
@@ -476,62 +615,66 @@ export default function AdminTests() {
 
           <DialogFooter>
             <Button variant="outline" onClick={resetForm}>Cancel</Button>
-            <Button onClick={handleSubmit}>{editingTest ? 'Update' : 'Create'}</Button>
+            <Button onClick={handleSubmit} className="gradient-primary">{editingTest ? 'Update' : 'Create'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Questions Dialog */}
+      {/* Questions Dialog with Image Support */}
       <Dialog open={isQuestionsOpen} onOpenChange={setIsQuestionsOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Manage Questions</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <ListChecks className="w-5 h-5 text-primary" />
+              Manage Questions
+            </DialogTitle>
           </DialogHeader>
 
           {/* Add New Question */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Add New Question</CardTitle>
+          <Card className="border-primary/20">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Add New Question
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 pt-4">
               <div className="space-y-2">
-                <Label>Question *</Label>
+                <Label>Question Text *</Label>
                 <Textarea
                   value={newQuestion.question}
                   onChange={(e) => setNewQuestion(p => ({ ...p, question: e.target.value }))}
-                  placeholder="Enter question"
+                  placeholder="Enter your question"
+                  rows={2}
                 />
               </div>
+              
+              <ImageUploadField 
+                label="Question" 
+                field="question_image_url" 
+                value={newQuestion.question_image_url} 
+              />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Option A *</Label>
-                  <Input
-                    value={newQuestion.option_a}
-                    onChange={(e) => setNewQuestion(p => ({ ...p, option_a: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Option B *</Label>
-                  <Input
-                    value={newQuestion.option_b}
-                    onChange={(e) => setNewQuestion(p => ({ ...p, option_b: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Option C *</Label>
-                  <Input
-                    value={newQuestion.option_c}
-                    onChange={(e) => setNewQuestion(p => ({ ...p, option_c: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Option D *</Label>
-                  <Input
-                    value={newQuestion.option_d}
-                    onChange={(e) => setNewQuestion(p => ({ ...p, option_d: e.target.value }))}
-                  />
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {['A', 'B', 'C', 'D'].map((opt) => {
+                  const optKey = `option_${opt.toLowerCase()}` as keyof TestQuestion;
+                  const imgKey = `option_${opt.toLowerCase()}_image_url` as keyof TestQuestion;
+                  return (
+                    <div key={opt} className="space-y-2 p-3 rounded-lg border bg-muted/30">
+                      <Label className="font-medium">Option {opt} *</Label>
+                      <Input
+                        value={newQuestion[optKey] as string || ''}
+                        onChange={(e) => setNewQuestion(p => ({ ...p, [optKey]: e.target.value }))}
+                        placeholder={`Option ${opt} text`}
+                      />
+                      <ImageUploadField 
+                        label={`Option ${opt}`} 
+                        field={imgKey as string} 
+                        value={newQuestion[imgKey] as string} 
+                      />
+                    </div>
+                  );
+                })}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -559,7 +702,7 @@ export default function AdminTests() {
                 </div>
               </div>
 
-              <Button onClick={handleAddQuestion} className="w-full">
+              <Button onClick={handleAddQuestion} className="w-full gradient-primary">
                 <Plus className="w-4 h-4 mr-2" />
                 Add Question
               </Button>
@@ -568,28 +711,57 @@ export default function AdminTests() {
 
           {/* Existing Questions */}
           <div className="space-y-4">
-            <h3 className="font-semibold">Existing Questions ({questions.length})</h3>
-            {questions.map((q, i) => (
-              <Card key={q.id} className="relative">
-                <CardContent className="pt-4">
-                  <div className="absolute top-2 right-2">
-                    <Button variant="ghost" size="sm" onClick={() => q.id && handleDeleteQuestion(q.id)} className="text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <p className="font-medium mb-2">Q{i + 1}. {q.question}</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <p className={q.correct_answer === 'A' ? 'text-green-600 font-medium' : ''}>A) {q.option_a}</p>
-                    <p className={q.correct_answer === 'B' ? 'text-green-600 font-medium' : ''}>B) {q.option_b}</p>
-                    <p className={q.correct_answer === 'C' ? 'text-green-600 font-medium' : ''}>C) {q.option_c}</p>
-                    <p className={q.correct_answer === 'D' ? 'text-green-600 font-medium' : ''}>D) {q.option_d}</p>
-                  </div>
-                  {q.explanation && (
-                    <p className="text-xs text-muted-foreground mt-2">💡 {q.explanation}</p>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
+            <h3 className="font-semibold flex items-center gap-2">
+              <ListChecks className="w-5 h-5" />
+              Existing Questions ({questions.length})
+            </h3>
+            <AnimatePresence>
+              {questions.map((q, i) => (
+                <motion.div
+                  key={q.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <Card className="relative overflow-hidden group hover:shadow-md transition-shadow">
+                    <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-primary to-primary/50" />
+                    <CardContent className="pt-4 pl-6">
+                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="sm" onClick={() => q.id && handleDeleteQuestion(q.id)} className="text-destructive">
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <p className="font-medium mb-2">
+                        <Badge variant="outline" className="mr-2">Q{i + 1}</Badge>
+                        {q.question}
+                      </p>
+                      {q.question_image_url && (
+                        <img src={q.question_image_url} alt="Question" className="h-24 object-contain rounded mb-2" />
+                      )}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {['A', 'B', 'C', 'D'].map((opt) => {
+                          const optKey = `option_${opt.toLowerCase()}` as keyof TestQuestion;
+                          const imgKey = `option_${opt.toLowerCase()}_image_url` as keyof TestQuestion;
+                          const isCorrect = q.correct_answer === opt;
+                          return (
+                            <div key={opt} className={`p-2 rounded ${isCorrect ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 font-medium' : 'bg-muted/50'}`}>
+                              <span className="font-medium">{opt})</span> {q[optKey] as string}
+                              {q[imgKey] && (
+                                <img src={q[imgKey] as string} alt={`Option ${opt}`} className="h-12 object-contain mt-1" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {q.explanation && (
+                        <p className="text-xs text-muted-foreground mt-2 p-2 bg-muted/50 rounded">💡 {q.explanation}</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </DialogContent>
       </Dialog>
