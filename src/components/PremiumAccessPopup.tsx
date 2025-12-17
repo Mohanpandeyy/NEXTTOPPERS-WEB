@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Crown, Sparkles, X, Key, Star, Loader2, ExternalLink, CheckCircle } from 'lucide-react';
+import { Crown, Sparkles, X, Star, Loader2, CheckCircle, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   Dialog,
   DialogContent,
@@ -11,6 +10,7 @@ import {
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 
 interface PremiumAccessPopupProps {
   isOpen: boolean;
@@ -27,87 +27,51 @@ export default function PremiumAccessPopup({
   onStartBasic,
   hasBasicContent,
 }: PremiumAccessPopupProps) {
-  const [step, setStep] = useState<'choose' | 'verify'>('choose');
-  const [token, setToken] = useState<string | null>(null);
-  const [shortLink, setShortLink] = useState<string | null>(null);
-  const [code, setCode] = useState('');
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
+  const { user } = useSupabaseAuth();
+  const [isUnlocking, setIsUnlocking] = useState(false);
   const [accessGranted, setAccessGranted] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
 
-  const handleGenerateKey = async () => {
-    setIsGenerating(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('start-verification', {
-        method: 'POST',
-      });
-
-      if (error) throw error;
-
-      setToken(data.token);
-      setShortLink(data.shortLink);
-      setStep('verify');
-      
-      // Open short link in new tab
-      window.open(data.shortLink, '_blank');
-      
-      toast.success('Verification link opened - copy the code from there');
-    } catch (error: any) {
-      console.error('Generate key error:', error);
-      toast.error(error.message || 'Failed to generate verification key');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handleConfirmCode = async () => {
-    if (!token || !code) {
-      toast.error('Please enter the verification code');
+  const handleGetPremium = async () => {
+    if (!user) {
+      toast.error('Please login first');
       return;
     }
 
-    if (code.length !== 6) {
-      toast.error('Code must be 6 digits');
-      return;
-    }
-
-    setIsConfirming(true);
+    setIsUnlocking(true);
     try {
-      const { data, error } = await supabase.functions.invoke('confirm-code', {
-        method: 'POST',
-        body: { token, code },
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+      
+      // Delete existing and insert new
+      await supabase.from('ad_access').delete().eq('user_id', user.id);
+      
+      const { error } = await supabase.from('ad_access').insert({
+        user_id: user.id,
+        granted_at: new Date().toISOString(),
+        expires_at: expires,
       });
 
       if (error) throw error;
 
       setAccessGranted(true);
-      setExpiresAt(data.expiresAt);
-      toast.success('Access granted for 36 hours!');
+      setExpiresAt(expires);
+      toast.success('Premium access granted for 24 hours!');
       
-      // Delay to show success, then close and trigger premium
       setTimeout(() => {
         onGetPremium();
         onClose();
       }, 1500);
-    } catch (error: any) {
-      console.error('Confirm code error:', error);
-      toast.error(error.message || 'Invalid verification code');
+    } catch (error) {
+      console.error('Unlock error:', error);
+      toast.error('Failed to unlock. Please try again.');
     } finally {
-      setIsConfirming(false);
+      setIsUnlocking(false);
     }
   };
 
-  const resetState = () => {
-    setStep('choose');
-    setToken(null);
-    setShortLink(null);
-    setCode('');
-    setAccessGranted(false);
-  };
-
   const handleClose = () => {
-    resetState();
+    setAccessGranted(false);
+    setExpiresAt(null);
     onClose();
   };
 
@@ -116,13 +80,13 @@ export default function PremiumAccessPopup({
       <Dialog open={isOpen} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-md">
           <div className="text-center py-8">
-            <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+            <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4 animate-bounce" />
             <h3 className="text-xl font-bold mb-2">Access Granted!</h3>
             <p className="text-muted-foreground">
-              You have premium access for 36 hours.
+              You have premium access for 24 hours.
               {expiresAt && (
                 <span className="block mt-2 text-sm">
-                  Expires: {new Date(expiresAt).toLocaleString()}
+                  Expires: {new Date(expiresAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                 </span>
               )}
             </p>
@@ -168,131 +132,73 @@ export default function PremiumAccessPopup({
                 <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary to-accent opacity-50 blur-xl animate-pulse" />
               </div>
               <DialogTitle className="text-3xl font-bold mt-6 text-gradient">
-                {step === 'choose' ? 'Choose Your Access' : 'Verify & Unlock'}
+                Choose Your Access
               </DialogTitle>
               <p className="text-muted-foreground mt-2">
-                {step === 'choose' ? 'Unlock the power of premium learning' : 'Enter the 6-digit code to unlock access'}
+                Unlock the power of premium learning
               </p>
             </DialogHeader>
 
-            {step === 'choose' ? (
-              <div className="space-y-4">
-                {/* Premium Option - Generate Key */}
-                <button
-                  className="w-full p-6 rounded-2xl border-2 border-primary bg-primary/10 hover:bg-primary/20 transition-all duration-300 text-left relative overflow-hidden group hover:scale-[1.02] shadow-lg"
-                  onClick={handleGenerateKey}
-                  disabled={isGenerating}
-                >
-                  <div className="relative flex items-start gap-4">
-                    <div className="relative">
-                      <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary via-purple-500 to-accent flex items-center justify-center shadow-lg">
-                        {isGenerating ? (
-                          <Loader2 className="w-7 h-7 text-primary-foreground animate-spin" />
-                        ) : (
-                          <Key className="w-7 h-7 text-primary-foreground" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-xl mb-1 flex items-center gap-2 flex-wrap">
-                        Generate Verification Key
-                        <span className="text-xs bg-gradient-to-r from-primary to-accent text-primary-foreground px-3 py-1 rounded-full font-medium shadow-lg">
-                          36hr Access
-                        </span>
-                      </h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        Complete verification to unlock <span className="text-primary font-medium">all lectures</span>, notes & materials
-                      </p>
+            <div className="space-y-4">
+              {/* Premium Option */}
+              <button
+                className="w-full p-6 rounded-2xl border-2 border-primary bg-primary/10 hover:bg-primary/20 transition-all duration-300 text-left relative overflow-hidden group hover:scale-[1.02] shadow-lg"
+                onClick={handleGetPremium}
+                disabled={isUnlocking}
+              >
+                <div className="relative flex items-start gap-4">
+                  <div className="relative">
+                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500 flex items-center justify-center shadow-lg">
+                      {isUnlocking ? (
+                        <Loader2 className="w-7 h-7 text-white animate-spin" />
+                      ) : (
+                        <Crown className="w-7 h-7 text-white" />
+                      )}
                     </div>
                   </div>
-                </button>
-
-                {/* Basic Option */}
-                <button
-                  className={cn(
-                    'w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group hover:scale-[1.02]',
-                    !hasBasicContent && 'opacity-40 cursor-not-allowed',
-                    'border-border/50 hover:border-secondary/50 glass-card'
-                  )}
-                  onClick={hasBasicContent ? onStartBasic : undefined}
-                  disabled={!hasBasicContent}
-                >
-                  <div className="relative flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center shadow-lg">
-                      <Sparkles className="w-7 h-7 text-secondary-foreground" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-bold text-xl mb-1">Start Basic</h3>
-                      <p className="text-sm text-muted-foreground leading-relaxed">
-                        {hasBasicContent 
-                          ? 'Access free sample lectures to get started'
-                          : 'No basic content available for this batch'}
-                      </p>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-xl mb-1 flex items-center gap-2 flex-wrap">
+                      Get Premium
+                      <span className="text-xs bg-gradient-to-r from-yellow-500 to-orange-500 text-white px-3 py-1 rounded-full font-medium shadow-lg">
+                        24hr Access
+                      </span>
+                    </h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      Unlock <span className="text-primary font-medium">all lectures</span>, notes & materials instantly
+                    </p>
+                    <div className="flex items-center gap-2 mt-2 text-sm text-primary">
+                      <Clock className="w-4 h-4" />
+                      <span className="font-medium">Valid for 24 Hours</span>
                     </div>
                   </div>
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-muted/50 rounded-xl text-sm space-y-2">
-                  <p className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">1</span>
-                    Complete verification in the new tab
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">2</span>
-                    Copy the 6-digit code shown
-                  </p>
-                  <p className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">3</span>
-                    Enter it below
-                  </p>
                 </div>
+              </button>
 
-                {shortLink && (
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => window.open(shortLink, '_blank')}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Open Verification Link Again
-                  </Button>
+              {/* Basic Option */}
+              <button
+                className={cn(
+                  'w-full p-6 rounded-2xl border-2 transition-all duration-300 text-left relative overflow-hidden group hover:scale-[1.02]',
+                  !hasBasicContent && 'opacity-40 cursor-not-allowed',
+                  'border-border/50 hover:border-secondary/50 bg-card'
                 )}
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Enter 6-Digit Code</label>
-                  <Input
-                    type="text"
-                    placeholder="000000"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    maxLength={6}
-                    className="text-center text-2xl tracking-[0.5em] font-mono h-14"
-                  />
+                onClick={hasBasicContent ? onStartBasic : undefined}
+                disabled={!hasBasicContent}
+              >
+                <div className="relative flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center shadow-lg">
+                    <Sparkles className="w-7 h-7 text-secondary-foreground" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-bold text-xl mb-1">Start Basic</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {hasBasicContent 
+                        ? 'Access free sample lectures to get started'
+                        : 'No basic content available for this batch'}
+                    </p>
+                  </div>
                 </div>
-
-                <div className="flex gap-3">
-                  <Button variant="outline" onClick={() => setStep('choose')} className="flex-1">
-                    Back
-                  </Button>
-                  <Button 
-                    onClick={handleConfirmCode} 
-                    disabled={isConfirming || code.length !== 6}
-                    className="flex-1"
-                  >
-                    {isConfirming ? (
-                      <>
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Verifying...
-                      </>
-                    ) : (
-                      'Confirm Code'
-                    )}
-                  </Button>
-                </div>
-              </div>
-            )}
+              </button>
+            </div>
 
             {/* Close button */}
             <button

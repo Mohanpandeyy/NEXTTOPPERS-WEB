@@ -29,7 +29,7 @@ import {
 } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Shield, Plus, Search, Clock, Trash2, User } from 'lucide-react';
+import { Shield, Plus, Clock, Trash2, User, Search } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -55,7 +55,7 @@ export default function AdminAccessGrant() {
   
   const [formData, setFormData] = useState({
     user_id: '',
-    hours: '36',
+    hours: '24',
   });
 
   useEffect(() => {
@@ -74,7 +74,6 @@ export default function AdminAccessGrant() {
 
       setProfiles(profilesRes.data || []);
       
-      // Map access with profile data
       const accessWithProfiles = (accessRes.data || []).map(access => ({
         ...access,
         profile: profilesRes.data?.find(p => p.user_id === access.user_id),
@@ -95,22 +94,24 @@ export default function AdminAccessGrant() {
     }
 
     try {
-      const hours = parseInt(formData.hours) || 36;
+      const hours = parseInt(formData.hours) || 24;
       const expiresAt = new Date(Date.now() + hours * 60 * 60 * 1000).toISOString();
 
-      const { error } = await supabase
-        .from('ad_access')
-        .upsert({
-          user_id: formData.user_id,
-          granted_at: new Date().toISOString(),
-          expires_at: expiresAt,
-        }, { onConflict: 'user_id' });
+      // First delete any existing access for this user
+      await supabase.from('ad_access').delete().eq('user_id', formData.user_id);
+
+      // Then insert new access
+      const { error } = await supabase.from('ad_access').insert({
+        user_id: formData.user_id,
+        granted_at: new Date().toISOString(),
+        expires_at: expiresAt,
+      });
 
       if (error) throw error;
 
       toast({ title: 'Success', description: `Access granted for ${hours} hours` });
       setIsGrantOpen(false);
-      setFormData({ user_id: '', hours: '36' });
+      setFormData({ user_id: '', hours: '24' });
       fetchData();
     } catch (error) {
       console.error('Error granting access:', error);
@@ -120,10 +121,7 @@ export default function AdminAccessGrant() {
 
   const handleRevokeAccess = async (accessId: string) => {
     try {
-      const { error } = await supabase
-        .from('ad_access')
-        .update({ expires_at: new Date().toISOString() })
-        .eq('id', accessId);
+      const { error } = await supabase.from('ad_access').delete().eq('id', accessId);
 
       if (error) throw error;
 
@@ -276,11 +274,15 @@ export default function AdminAccessGrant() {
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label>Search User</Label>
-              <Input
-                placeholder="Search by name or email..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name or email..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -303,15 +305,14 @@ export default function AdminAccessGrant() {
             </div>
 
             <div className="space-y-2">
-              <Label>Duration (hours)</Label>
+              <Label>Duration</Label>
               <Select value={formData.hours} onValueChange={(v) => setFormData(p => ({ ...p, hours: v }))}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="12">12 hours</SelectItem>
-                  <SelectItem value="24">24 hours</SelectItem>
-                  <SelectItem value="36">36 hours</SelectItem>
+                  <SelectItem value="24">24 hours (1 day)</SelectItem>
                   <SelectItem value="48">48 hours (2 days)</SelectItem>
                   <SelectItem value="72">72 hours (3 days)</SelectItem>
                   <SelectItem value="168">168 hours (1 week)</SelectItem>
